@@ -39,6 +39,23 @@ flutter run -d chrome
 
 También se puede entrar con **Entrar en modo demostración**, sin registro.
 
+### Contratos de la cuenta
+
+Andrés es titular de la casa principal `1002345678` (pendiente), el apartamento `1008876543` (sin deuda) y el local `1005520198` (vencido). También tiene vinculados contratos de terceros: Rosa Frías `1004411223`, Luis Peña `1007788990` y Pedro Gómez `1006655443`. Esos se pueden desvincular. Los propios no.
+
+Para agregar otro suministro: contrato `1009900112`, cédula `001-9988776-6`, titular Carmen Díaz. El número `1000000000` no existe.
+
+En Modo demostración se puede cargar un solo contrato propio, varios propios, propios con terceros o solo terceros.
+
+### Tarjetas de prueba
+
+La cuenta ya tiene una Visa crédito •••• 1111 y una Mastercard débito •••• 4444. Al agregar una tarjeta solo se guardan la marca, los últimos cuatro dígitos, el nombre, el vencimiento y el tipo.
+
+- Éxito: `4111 1111 1111 1111`
+- Rechazo: termina en `0002`
+- Error de procesamiento: termina en `0005`
+- Vencida: `01/26`
+
 La fecha de referencia de la presentación es el **31/10/2026**. Los vencimientos se calculan contra esa fecha para que el escenario no cambie el día de la demo.
 
 ### Pagos simulados
@@ -59,7 +76,8 @@ La fecha de referencia de la presentación es el **31/10/2026**. Los vencimiento
 - Catálogo de trámites, formularios, número de solicitud y seguimiento.
 - Asistente con catálogo local. No usa OpenAI, Claude ni otro proveedor.
 - Notificaciones locales, varios contratos, preferencias, seguridad y centros de atención ficticios.
-- Modo demostración: servicio normal, interrupción, factura vencida y avería en proceso.
+- Modo demostración: servicio normal, interrupción, factura vencida, avería en proceso y carteras de contratos.
+- Pago de uno o varios contratos, historial y métodos de pago guardados sin número completo ni CVV.
 
 Los cambios de la demostración se guardan en el dispositivo con SharedPreferences.
 

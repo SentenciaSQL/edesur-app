@@ -320,7 +320,13 @@ class Catalogs {
 class AssistantEngine {
   AssistantReply reply(String question, DemoSnapshot snapshot) {
     final q = normalizeText(question);
-    final contract = snapshot.activeContract;
+    final contract = snapshot.activeContractOrNull;
+    if (contract == null) {
+      return const AssistantReply(
+        text: 'No tienes contratos vinculados en esta demostración. Puedes agregar uno desde Contratos.',
+        actions: [ChatAction(label: 'Ver contratos', link: AssistantLink.contracts)],
+      );
+    }
     final invoice = snapshot.payableInvoice;
     final balance = snapshot.activeBalance;
     final current = snapshot.currentConsumption;

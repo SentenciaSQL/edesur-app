@@ -3,8 +3,40 @@ import '../../core/utils/formatters.dart';
 import '../entities/entities.dart';
 
 extension DemoSelectors on DemoSnapshot {
-  ContractAccount get activeContract =>
-      contracts.firstWhere((contract) => contract.id == activeContractId);
+  ContractAccount? get activeContractOrNull {
+    for (final contract in contracts) {
+      if (contract.id == activeContractId) return contract;
+    }
+    return null;
+  }
+
+  ContractAccount get activeContract {
+    final contract = activeContractOrNull;
+    if (contract == null) {
+      throw StateError('No hay un contrato activo.');
+    }
+    return contract;
+  }
+
+  SavedCard? get defaultCard {
+    for (final card in cards) {
+      if (card.isDefault) return card;
+    }
+    return cards.isEmpty ? null : cards.first;
+  }
+
+  PaymentTransaction? transactionById(String id) {
+    for (final transaction in transactions) {
+      if (transaction.id == id) return transaction;
+    }
+    return null;
+  }
+
+  List<PaymentTransaction> get transactionsNewestFirst {
+    final items = [...transactions];
+    items.sort((a, b) => b.paidAt.compareTo(a.paidAt));
+    return items;
+  }
 
   List<Invoice> invoicesOf(String contractId) {
     final items = invoices.where((invoice) => invoice.contractId == contractId).toList();

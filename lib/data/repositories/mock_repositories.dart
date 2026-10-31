@@ -1,8 +1,10 @@
+import '../../core/constants/app_constants.dart';
 import '../../core/mock/catalogs.dart';
 import '../../core/mock/demo_clock.dart';
 import '../../core/mock/mock_seed.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/demo_exception.dart';
+import '../../core/utils/formatters.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/repositories/repositories.dart';
 import '../../shared/labels.dart';
@@ -48,6 +50,103 @@ class MockAccountRepository implements AccountRepository {
     ];
     return _db.commit(_db.current.copyWith(contracts: contracts));
   }
+
+  @override
+  Future<DemoSnapshot> updateAlias({required String contractId, required String alias}) {
+    final exists = _db.current.contracts.any((contract) => contract.id == contractId);
+    if (!exists) throw DemoException('No encontramos ese contrato.');
+    final contracts = [
+      for (final contract in _db.current.contracts)
+        if (contract.id == contractId) contract.copyWith(alias: alias.trim()) else contract,
+    ];
+    return _db.commit(_db.current.copyWith(contracts: contracts));
+  }
+
+  @override
+  Future<DemoSnapshot> linkContract({
+    required ContractAccount contract,
+    required List<Invoice> invoices,
+    required List<ConsumptionMonth> months,
+    required String alias,
+  }) {
+    final current = _db.current;
+    if (current.contracts.any((item) => item.id == contract.id || item.number == contract.number)) {
+      throw DemoException('Este contrato ya está vinculado a tu cuenta.');
+    }
+    final linked = contract.copyWith(alias: alias.trim());
+    return _db.commit(current.copyWith(
+      contracts: [...current.contracts, linked],
+      invoices: [...current.invoices, ...invoices],
+      consumption: [...current.consumption, ...months],
+      activeContractId: current.contracts.isEmpty ? linked.id : current.activeContractId,
+    ));
+  }
+
+  @override
+  Future<DemoSnapshot> unlinkContract(String contractId) {
+    final current = _db.current;
+    ContractAccount? contract;
+    for (final item in current.contracts) {
+      if (item.id == contractId) contract = item;
+    }
+    if (contract == null) throw DemoException('No encontramos ese contrato.');
+    if (contract.isOwnedBy(current.user.cedula)) {
+      throw DemoException(AppConstants.cannotUnlinkOwnContract);
+    }
+    final contracts = current.contracts.where((item) => item.id != contractId).toList();
+    final active = current.activeContractId == contractId
+        ? (contracts.isEmpty ? '' : contracts.first.id)
+        : current.activeContractId;
+    return _db.commit(current.copyWith(
+      contracts: contracts,
+      activeContractId: active,
+      invoices: current.invoices.where((invoice) => invoice.contractId != contractId).toList(),
+      consumption: current.consumption.where((month) => month.contractId != contractId).toList(),
+      outages: current.outages.where((report) => report.contractId != contractId).toList(),
+      requests: current.requests.where((request) => request.contractId != contractId).toList(),
+    ));
+  }
+
+  @override
+  Future<DemoSnapshot> addCard(SavedCard card) {
+    final current = _db.current;
+    final makeDefault = current.cards.isEmpty || card.isDefault;
+    final existing = [
+      for (final item in current.cards) item.copyWith(isDefault: makeDefault ? false : item.isDefault),
+    ];
+    final saved = card.copyWith(isDefault: makeDefault);
+    return _db.commit(current.copyWith(cards: [...existing, saved], cardSequence: current.cardSequence + 1));
+  }
+
+  @override
+  Future<DemoSnapshot> removeCard({required String cardId, String? replacementDefaultId}) {
+    final current = _db.current;
+    SavedCard? card;
+    for (final item in current.cards) {
+      if (item.id == cardId) card = item;
+    }
+    if (card == null) throw DemoException('No encontramos esa tarjeta.');
+    final others = current.cards.where((item) => item.id != cardId).toList();
+    if (card.isDefault && others.isNotEmpty) {
+      if (replacementDefaultId == null || !others.any((item) => item.id == replacementDefaultId)) {
+        throw DemoException('Elige otra tarjeta como predeterminada antes de eliminar esta.');
+      }
+    }
+    final cards = [
+      for (final item in others) item.copyWith(isDefault: item.id == replacementDefaultId || (!card.isDefault && item.isDefault)),
+    ];
+    return _db.commit(current.copyWith(cards: cards));
+  }
+
+  @override
+  Future<DemoSnapshot> setDefaultCard(String cardId) {
+    final current = _db.current;
+    if (!current.cards.any((card) => card.id == cardId)) {
+      throw DemoException('No encontramos esa tarjeta.');
+    }
+    final cards = [for (final card in current.cards) card.copyWith(isDefault: card.id == cardId)];
+    return _db.commit(current.copyWith(cards: cards));
+  }
 }
 
 class MockBillingRepository implements BillingRepository {
@@ -55,56 +154,113 @@ class MockBillingRepository implements BillingRepository {
   final MockDatabase _db;
 
   @override
-  Future<PaymentReceipt> registerPayment({
-    required String invoiceId,
+  Future<PaymentTransaction> settle({
+    required List<String> invoiceIds,
     required PaymentMethod method,
+    required PaymentStatus status,
+    CardBrand? cardBrand,
     String? cardLast4,
+    String? cardHolder,
+    String? message,
   }) async {
     final snapshot = _db.current;
-    final index = snapshot.invoices.indexWhere((invoice) => invoice.id == invoiceId);
-    if (index < 0) throw DemoException('No encontramos la factura.');
-    final invoice = snapshot.invoices[index];
-    final contract = snapshot.contracts.firstWhere((item) => item.id == invoice.contractId);
-    final sequence = snapshot.receiptSequence + 1;
-    final reference = switch (method) {
-      PaymentMethod.card => 'TARJ-${cardLast4 ?? '0000'}-${sequence.toString().padLeft(4, '0')}',
-      PaymentMethod.transfer => 'TRF-DEMO-$sequence',
-      PaymentMethod.paymentPoint => 'PAG-DEMO-$sequence',
-    };
-    final receipt = PaymentReceipt(
-      id: 'rcp-$sequence',
-      number: 'CP-2026-${sequence.toString().padLeft(5, '0')}',
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.number,
-      contractNumber: contract.number,
-      amount: invoice.total,
-      method: method,
-      paidAt: DemoClock.now,
-      reference: reference,
-      authorization: 'AUTH-DEMO-${900000 + sequence}',
-    );
+    final selected = <Invoice>[];
+    for (final id in invoiceIds) {
+      Invoice? invoice;
+      for (final item in snapshot.invoices) {
+        if (item.id == id) invoice = item;
+      }
+      if (invoice == null) throw DemoException('No encontramos la factura.');
+      if (invoice.status == InvoiceStatus.paid) {
+        throw DemoException('La factura ${invoice.number} ya está pagada.');
+      }
+      selected.add(invoice);
+    }
+    final now = DemoClock.now;
+    final txSequence = snapshot.transactionSequence + 1;
+    final txId = 'tx-$txSequence';
+    var receiptSequence = snapshot.receiptSequence;
+    final receipts = <PaymentReceipt>[];
+    final lines = <PaymentLine>[];
     final invoices = [...snapshot.invoices];
-    invoices[index] = invoice.copyWith(
-      status: InvoiceStatus.paid,
-      paidAt: DemoClock.now,
-      receiptId: receipt.id,
+    final approved = status == PaymentStatus.approved;
+    for (final invoice in selected) {
+      final contract = snapshot.contracts.firstWhere((item) => item.id == invoice.contractId);
+      String? receiptId;
+      if (approved) {
+        receiptSequence += 1;
+        receiptId = 'rcp-$receiptSequence';
+        final reference = switch (method) {
+          PaymentMethod.card => 'TARJ-${cardLast4 ?? '0000'}-${receiptSequence.toString().padLeft(4, '0')}',
+          PaymentMethod.transfer => 'TRF-DEMO-$receiptSequence',
+          PaymentMethod.paymentPoint => 'PAG-DEMO-$receiptSequence',
+        };
+        receipts.add(PaymentReceipt(
+          id: receiptId,
+          number: 'CP-2026-${receiptSequence.toString().padLeft(5, '0')}',
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.number,
+          contractNumber: contract.number,
+          amount: invoice.total,
+          method: method,
+          paidAt: now,
+          reference: reference,
+          authorization: 'AUTH-DEMO-${900000 + receiptSequence}',
+          transactionId: txId,
+          cardBrand: cardBrand,
+          cardLast4: cardLast4,
+        ));
+        final index = invoices.indexWhere((item) => item.id == invoice.id);
+        invoices[index] = invoice.copyWith(status: InvoiceStatus.paid, paidAt: now, receiptId: receiptId);
+      }
+      lines.add(PaymentLine(
+        contractId: contract.id,
+        contractNumber: contract.number,
+        alias: contract.alias,
+        holderName: contract.holderName,
+        address: contract.address,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        amount: invoice.total,
+        receiptId: receiptId,
+      ));
+    }
+    final total = round2(lines.fold<double>(0, (sum, line) => sum + line.amount));
+    final transaction = PaymentTransaction(
+      id: txId,
+      number: 'TX-2026-${txSequence.toString().padLeft(5, '0')}',
+      paidAt: now,
+      method: method,
+      status: status,
+      total: total,
+      lines: lines,
+      cardBrand: cardBrand,
+      cardLast4: cardLast4,
+      cardHolder: cardHolder,
+      message: message,
     );
-    final notification = AppNotification(
-      id: 'nt-pay-$sequence',
-      kind: NotificationKind.paymentDone,
-      title: 'Pago realizado',
-      body: 'Se aplicó ${receipt.number} a la factura ${invoice.number}. Comprobante de demostración.',
-      createdAt: DemoClock.now,
-      read: false,
-      route: '/comprobante/${receipt.id}',
-    );
+    final notification = approved
+        ? AppNotification(
+            id: 'nt-pay-$txSequence',
+            kind: NotificationKind.paymentDone,
+            title: lines.length > 1 ? 'Pago múltiple realizado' : 'Pago realizado',
+            body: lines.length > 1
+                ? 'Se aplicó ${transaction.number} a ${lines.length} contratos. Comprobante simulado.'
+                : 'Se aplicó ${transaction.number} a la factura ${lines.first.invoiceNumber}. Comprobante de demostración.',
+            createdAt: now,
+            read: false,
+            route: '/transaccion/$txId',
+          )
+        : null;
     await _db.commit(snapshot.copyWith(
       invoices: invoices,
-      receipts: [receipt, ...snapshot.receipts],
-      notifications: [notification, ...snapshot.notifications],
-      receiptSequence: sequence,
+      receipts: [...receipts, ...snapshot.receipts],
+      transactions: [transaction, ...snapshot.transactions],
+      notifications: notification == null ? snapshot.notifications : [notification, ...snapshot.notifications],
+      receiptSequence: receiptSequence,
+      transactionSequence: txSequence,
     ));
-    return receipt;
+    return transaction;
   }
 }
 
@@ -298,7 +454,13 @@ class MockDemoRepository implements DemoControlsRepository {
   @override
   Future<DemoSnapshot> applyScenario(DemoScenario scenario, {required bool keepAccount}) async {
     final current = _db.current;
-    final seeded = MockSeed.build(scenario);
+    final seeded = MockSeed.build(
+      scenario,
+      portfolio: keepAccount ? current.portfolio : PortfolioPreset.mixed,
+    );
+    final active = seeded.contracts.any((contract) => contract.id == current.activeContractId)
+        ? current.activeContractId
+        : seeded.activeContractId;
     final next = keepAccount
         ? seeded.copyWith(
             user: current.user,
@@ -307,10 +469,30 @@ class MockDemoRepository implements DemoControlsRepository {
             onboardingDone: true,
             prefs: current.prefs,
             lastAccess: current.lastAccess,
-            activeContractId: current.activeContractId,
+            cards: current.cards,
+            cardSequence: current.cardSequence,
+            activeContractId: active,
           )
         : seeded.copyWith(authenticated: current.authenticated, onboardingDone: true);
     final saved = await _db.commit(next);
+    _api.attachSession(saved.authenticated ? 'demo-session' : null);
+    return saved;
+  }
+
+  @override
+  Future<DemoSnapshot> applyPortfolio(PortfolioPreset portfolio) async {
+    final current = _db.current;
+    final seeded = MockSeed.build(current.scenario, portfolio: portfolio);
+    final saved = await _db.commit(seeded.copyWith(
+      user: current.user,
+      password: current.password,
+      authenticated: current.authenticated,
+      onboardingDone: true,
+      prefs: current.prefs,
+      lastAccess: current.lastAccess,
+      cards: current.cards,
+      cardSequence: current.cardSequence,
+    ));
     _api.attachSession(saved.authenticated ? 'demo-session' : null);
     return saved;
   }

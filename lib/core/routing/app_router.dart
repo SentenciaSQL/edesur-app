@@ -14,6 +14,10 @@ import '../../features/offices/office_screens.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/outages/outage_screens.dart';
+import '../../features/contracts/contract_screens.dart';
+import '../../features/payments/multi_payment_screen.dart';
+import '../../features/payments/payment_history_screen.dart';
+import '../../features/payments/payment_methods_screen.dart';
 import '../../features/payments/payment_screen.dart';
 import '../../features/profile/profile_screens.dart';
 import '../../features/requests/request_screens.dart';
@@ -79,6 +83,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/oficinas/:id', builder: (_, state) => OfficeDetailScreen(id: state.pathParameters['id']!)),
       GoRoute(path: Routes.personal, builder: (_, _) => const PersonalDataScreen()),
       GoRoute(path: Routes.contracts, builder: (_, _) => const ContractsScreen()),
+      GoRoute(path: Routes.addContract, builder: (_, _) => const AddContractScreen()),
+      GoRoute(path: '/contratos/:id', builder: (_, state) => ContractDetailScreen(id: state.pathParameters['id']!)),
+      GoRoute(path: Routes.paymentMethods, builder: (_, _) => const PaymentMethodsScreen()),
+      GoRoute(path: Routes.addCard, builder: (_, _) => const AddCardScreen()),
+      GoRoute(path: Routes.paymentHistory, builder: (_, _) => const PaymentHistoryScreen()),
+      GoRoute(path: '/transaccion/:id', builder: (_, state) => TransactionScreen(id: state.pathParameters['id']!)),
+      GoRoute(path: Routes.multiPay, builder: (_, _) => const MultiPaymentScreen()),
       GoRoute(path: Routes.security, builder: (_, _) => const SecurityScreen()),
       GoRoute(path: Routes.preferences, builder: (_, _) => const PreferencesScreen()),
       GoRoute(path: Routes.faq, builder: (_, _) => const FaqScreen()),

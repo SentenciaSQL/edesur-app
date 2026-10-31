@@ -10,13 +10,28 @@ abstract class AccountRepository {
     required String address,
     required String sector,
   });
+  Future<DemoSnapshot> updateAlias({required String contractId, required String alias});
+  Future<DemoSnapshot> linkContract({
+    required ContractAccount contract,
+    required List<Invoice> invoices,
+    required List<ConsumptionMonth> months,
+    required String alias,
+  });
+  Future<DemoSnapshot> unlinkContract(String contractId);
+  Future<DemoSnapshot> addCard(SavedCard card);
+  Future<DemoSnapshot> removeCard({required String cardId, String? replacementDefaultId});
+  Future<DemoSnapshot> setDefaultCard(String cardId);
 }
 
 abstract class BillingRepository {
-  Future<PaymentReceipt> registerPayment({
-    required String invoiceId,
+  Future<PaymentTransaction> settle({
+    required List<String> invoiceIds,
     required PaymentMethod method,
+    required PaymentStatus status,
+    CardBrand? cardBrand,
     String? cardLast4,
+    String? cardHolder,
+    String? message,
   });
 }
 
@@ -41,5 +56,6 @@ abstract class AssistantRepository {
 
 abstract class DemoControlsRepository {
   Future<DemoSnapshot> applyScenario(DemoScenario scenario, {required bool keepAccount});
+  Future<DemoSnapshot> applyPortfolio(PortfolioPreset portfolio);
   Future<DemoSnapshot> restoreInitial();
 }

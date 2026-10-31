@@ -33,6 +33,48 @@ String paymentMethodLabel(PaymentMethod method) => switch (method) {
       PaymentMethod.paymentPoint => 'Punto de pago',
     };
 
+String cardBrandLabel(CardBrand brand) => switch (brand) {
+      CardBrand.visa => 'Visa',
+      CardBrand.mastercard => 'Mastercard',
+      CardBrand.amex => 'American Express',
+    };
+
+String cardFundingLabel(CardFunding funding) => switch (funding) {
+      CardFunding.credit => 'Crédito',
+      CardFunding.debit => 'Débito',
+    };
+
+String paymentStatusLabel(PaymentStatus status) => switch (status) {
+      PaymentStatus.approved => 'Aprobado',
+      PaymentStatus.rejected => 'Rechazado',
+      PaymentStatus.expiredCard => 'Tarjeta vencida',
+      PaymentStatus.processingError => 'Error de procesamiento',
+    };
+
+Color paymentStatusColor(PaymentStatus status) => switch (status) {
+      PaymentStatus.approved => AppColors.green,
+      PaymentStatus.rejected => AppColors.red,
+      PaymentStatus.expiredCard => AppColors.amber,
+      PaymentStatus.processingError => AppColors.red,
+    };
+
+String portfolioLabel(PortfolioPreset preset) => switch (preset) {
+      PortfolioPreset.mixed => 'Propios y de terceros',
+      PortfolioPreset.singleOwn => 'Un solo contrato propio',
+      PortfolioPreset.severalOwn => 'Varios contratos propios',
+      PortfolioPreset.ownAndThird => 'Propios con contratos de terceros',
+      PortfolioPreset.thirdOnly => 'Solo contratos de terceros',
+    };
+
+String portfolioDescription(PortfolioPreset preset) => switch (preset) {
+      PortfolioPreset.mixed =>
+        'Andrés es titular de casa, apartamento y local, y también tiene vinculados contratos de Rosa, Luis y Pedro.',
+      PortfolioPreset.singleOwn => 'Solo queda la casa principal, con factura pendiente.',
+      PortfolioPreset.severalOwn => 'Tres contratos a nombre de Andrés: pendiente, sin deuda y vencido.',
+      PortfolioPreset.ownAndThird => 'La casa y el local propios, más la casa de mamá y el inquilino.',
+      PortfolioPreset.thirdOnly => 'Ningún contrato está a nombre de Andrés. Todos se pueden desvincular.',
+    };
+
 String outageTypeLabel(OutageType type) => switch (type) {
       OutageType.noPower => 'No tengo electricidad',
       OutageType.frequentInterruptions => 'Interrupciones frecuentes',

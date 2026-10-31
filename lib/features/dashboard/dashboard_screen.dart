@@ -20,6 +20,13 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SnapshotBody(
       builder: (context, snapshot) {
+        if (snapshot.contracts.isEmpty) {
+          return EmptyState(
+            title: 'Sin contratos vinculados',
+            message: 'Agrega un suministro de demostración para ver el balance, el consumo y el estado del servicio.',
+            action: FilledButton(onPressed: () => context.push(Routes.addContract), child: const Text('Agregar contrato')),
+          );
+        }
         final contract = snapshot.activeContract;
         final invoice = snapshot.payableInvoice;
         final balance = snapshot.activeBalance;
@@ -99,6 +106,10 @@ class DashboardScreen extends ConsumerWidget {
                     FilledButton(
                       onPressed: invoice == null ? null : () => context.push(Routes.pay(invoice.id)),
                       child: const Text('Pagar ahora'),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(onPressed: () => context.push(Routes.multiPay), child: const Text('Pagar varios contratos')),
                     ),
                   ],
                 ),

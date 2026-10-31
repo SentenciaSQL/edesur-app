@@ -155,10 +155,11 @@ class SectionHeader extends StatelessWidget {
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.title, required this.message, this.icon = Icons.inbox_outlined});
+  const EmptyState({super.key, required this.title, required this.message, this.icon = Icons.inbox_outlined, this.action});
   final String title;
   final String message;
   final IconData icon;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +173,7 @@ class EmptyState extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
           const SizedBox(height: 6),
           Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
+          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
     );
@@ -297,8 +299,8 @@ Future<void> showContractSwitcher(BuildContext context, WidgetRef ref) {
                   contract.id == snapshot.activeContractId ? Icons.check_circle : Icons.home_work_outlined,
                   color: contract.id == snapshot.activeContractId ? AppColors.orange : AppColors.navy,
                 ),
-                title: Text(contract.number, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('${contract.sector} · ${contract.clientType}'),
+                title: Text(contract.displayName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text('${contract.number} · ${contract.sector}'),
                 trailing: StatusPill(
                   label: serviceStatusLabel(contract.serviceStatus),
                   color: serviceStatusColor(contract.serviceStatus),

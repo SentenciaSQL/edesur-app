@@ -4,6 +4,16 @@ enum InvoiceStatus { paid, pending, overdue }
 
 enum PaymentMethod { card, transfer, paymentPoint }
 
+enum CardBrand { visa, mastercard, amex }
+
+enum CardFunding { credit, debit }
+
+enum PaymentStatus { approved, rejected, expiredCard, processingError }
+
+enum PortfolioPreset { mixed, singleOwn, severalOwn, ownAndThird, thirdOnly }
+
+enum LinkLookupResult { found, missing, alreadyLinked, holderMismatch }
+
 enum OutageType {
   noPower,
   frequentInterruptions,
@@ -111,10 +121,12 @@ class ContractAccount {
     required this.mapY,
     required this.latitude,
     required this.longitude,
+    this.alias = '',
   });
 
   final String id;
   final String number;
+  final String alias;
   final String holderName;
   final String cedula;
   final String address;
@@ -133,10 +145,24 @@ class ContractAccount {
   final double latitude;
   final double longitude;
 
-  ContractAccount copyWith({ServiceStatus? serviceStatus, String? address, String? sector}) {
+  String get displayName => alias.trim().isEmpty ? number : alias.trim();
+
+  bool isOwnedBy(String cedula) {
+    final own = cedula.replaceAll(RegExp(r'\D'), '');
+    final holder = this.cedula.replaceAll(RegExp(r'\D'), '');
+    return own.isNotEmpty && own == holder;
+  }
+
+  ContractAccount copyWith({
+    ServiceStatus? serviceStatus,
+    String? address,
+    String? sector,
+    String? alias,
+  }) {
     return ContractAccount(
       id: id,
       number: number,
+      alias: alias ?? this.alias,
       holderName: holderName,
       cedula: cedula,
       address: address ?? this.address,
@@ -456,6 +482,9 @@ class PaymentReceipt {
     required this.paidAt,
     required this.reference,
     required this.authorization,
+    this.transactionId,
+    this.cardBrand,
+    this.cardLast4,
   });
 
   final String id;
@@ -468,6 +497,102 @@ class PaymentReceipt {
   final DateTime paidAt;
   final String reference;
   final String authorization;
+  final String? transactionId;
+  final CardBrand? cardBrand;
+  final String? cardLast4;
+}
+
+class SavedCard {
+  const SavedCard({
+    required this.id,
+    required this.brand,
+    required this.funding,
+    required this.last4,
+    required this.holderName,
+    required this.expiryMonth,
+    required this.expiryYear,
+    required this.isDefault,
+  });
+
+  final String id;
+  final CardBrand brand;
+  final CardFunding funding;
+  final String last4;
+  final String holderName;
+  final int expiryMonth;
+  final int expiryYear;
+  final bool isDefault;
+
+  bool isExpiredAt(DateTime moment) {
+    return expiryYear < moment.year || (expiryYear == moment.year && expiryMonth < moment.month);
+  }
+
+  SavedCard copyWith({bool? isDefault}) {
+    return SavedCard(
+      id: id,
+      brand: brand,
+      funding: funding,
+      last4: last4,
+      holderName: holderName,
+      expiryMonth: expiryMonth,
+      expiryYear: expiryYear,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+}
+
+class PaymentLine {
+  const PaymentLine({
+    required this.contractId,
+    required this.contractNumber,
+    required this.alias,
+    required this.holderName,
+    required this.address,
+    required this.invoiceId,
+    required this.invoiceNumber,
+    required this.amount,
+    this.receiptId,
+  });
+
+  final String contractId;
+  final String contractNumber;
+  final String alias;
+  final String holderName;
+  final String address;
+  final String invoiceId;
+  final String invoiceNumber;
+  final double amount;
+  final String? receiptId;
+}
+
+class PaymentTransaction {
+  const PaymentTransaction({
+    required this.id,
+    required this.number,
+    required this.paidAt,
+    required this.method,
+    required this.status,
+    required this.total,
+    required this.lines,
+    this.cardBrand,
+    this.cardLast4,
+    this.cardHolder,
+    this.message,
+  });
+
+  final String id;
+  final String number;
+  final DateTime paidAt;
+  final PaymentMethod method;
+  final PaymentStatus status;
+  final double total;
+  final List<PaymentLine> lines;
+  final CardBrand? cardBrand;
+  final String? cardLast4;
+  final String? cardHolder;
+  final String? message;
+
+  bool get approved => status == PaymentStatus.approved;
 }
 
 class ChatAction {
@@ -579,12 +704,17 @@ class DemoSnapshot {
     required this.announcements,
     required this.mapIncidents,
     required this.receipts,
+    required this.transactions,
+    required this.cards,
     required this.messages,
     required this.prefs,
     required this.scenario,
     required this.reportSequence,
     required this.requestSequence,
     required this.receiptSequence,
+    required this.transactionSequence,
+    required this.cardSequence,
+    required this.portfolio,
     required this.lastUpdated,
     this.lastAccess,
   });
@@ -603,12 +733,17 @@ class DemoSnapshot {
   final List<Announcement> announcements;
   final List<MapIncident> mapIncidents;
   final List<PaymentReceipt> receipts;
+  final List<PaymentTransaction> transactions;
+  final List<SavedCard> cards;
   final List<ChatMessage> messages;
   final NotificationPrefs prefs;
   final DemoScenario scenario;
   final int reportSequence;
   final int requestSequence;
   final int receiptSequence;
+  final int transactionSequence;
+  final int cardSequence;
+  final PortfolioPreset portfolio;
   final DateTime lastUpdated;
   final DateTime? lastAccess;
 
@@ -627,12 +762,17 @@ class DemoSnapshot {
     List<Announcement>? announcements,
     List<MapIncident>? mapIncidents,
     List<PaymentReceipt>? receipts,
+    List<PaymentTransaction>? transactions,
+    List<SavedCard>? cards,
     List<ChatMessage>? messages,
     NotificationPrefs? prefs,
     DemoScenario? scenario,
     int? reportSequence,
     int? requestSequence,
     int? receiptSequence,
+    int? transactionSequence,
+    int? cardSequence,
+    PortfolioPreset? portfolio,
     DateTime? lastUpdated,
     DateTime? lastAccess,
     bool clearLastAccess = false,
@@ -652,12 +792,17 @@ class DemoSnapshot {
       announcements: announcements ?? this.announcements,
       mapIncidents: mapIncidents ?? this.mapIncidents,
       receipts: receipts ?? this.receipts,
+      transactions: transactions ?? this.transactions,
+      cards: cards ?? this.cards,
       messages: messages ?? this.messages,
       prefs: prefs ?? this.prefs,
       scenario: scenario ?? this.scenario,
       reportSequence: reportSequence ?? this.reportSequence,
       requestSequence: requestSequence ?? this.requestSequence,
       receiptSequence: receiptSequence ?? this.receiptSequence,
+      transactionSequence: transactionSequence ?? this.transactionSequence,
+      cardSequence: cardSequence ?? this.cardSequence,
+      portfolio: portfolio ?? this.portfolio,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       lastAccess: clearLastAccess ? null : lastAccess ?? this.lastAccess,
     );

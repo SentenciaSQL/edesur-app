@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../core/billing/card_rules.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/card_formatters.dart';
 import '../../core/utils/validators.dart';
 import '../../domain/entities/entities.dart';
 import '../../shared/labels.dart';
@@ -129,22 +130,28 @@ class SimulatedPaymentFormState extends State<SimulatedPaymentForm> {
                 controller: _card,
                 decoration: const InputDecoration(labelText: 'Número de tarjeta de prueba'),
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d\s]'))],
+                inputFormatters: [CardNumberFormatter()],
+                onChanged: (_) => setState(() {}),
                 validator: Validators.cardNumber,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _name,
                 decoration: const InputDecoration(labelText: 'Nombre en la tarjeta'),
-                validator: (value) => Validators.required(value, label: 'El nombre'),
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [CardHolderFormatter()],
+                validator: Validators.cardHolder,
               ),
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _expiry,
                       decoration: const InputDecoration(labelText: 'Vence', hintText: 'MM/AA'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [ExpiryFormatter()],
                       validator: Validators.expiry,
                     ),
                   ),
@@ -153,15 +160,17 @@ class SimulatedPaymentFormState extends State<SimulatedPaymentForm> {
                     child: TextFormField(
                       controller: _cvv,
                       decoration: const InputDecoration(labelText: 'CVV'),
+                      keyboardType: TextInputType.number,
                       obscureText: true,
-                      validator: Validators.cvv,
+                      inputFormatters: [CvvFormatter(() => CardRules.cvvLength(_card.text))],
+                      validator: (value) => Validators.cvv(value, pan: _card.text),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               const Text(
-                'El número y el CVV solo se usan en esta simulación y no se guardan. Éxito: 4111 1111 1111 1111. Rechazo: termina en 0002. Error: termina en 0005. Vencida: 01/26.',
+                'El número y el CVV solo se usan en esta simulación y no se guardan. Éxito: 4111 1111 1111 1111. Rechazo: 4111 1131 1111 0002. Error: 4111 1161 1111 0005. Un vencimiento anterior a 10/26 no se acepta.',
                 style: TextStyle(color: AppColors.muted, fontSize: 12),
               ),
             ],

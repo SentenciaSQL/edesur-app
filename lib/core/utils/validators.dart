@@ -1,4 +1,4 @@
-import '../mock/demo_clock.dart';
+import '../billing/card_rules.dart';
 
 class Validators {
   static final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -56,40 +56,15 @@ class Validators {
     return null;
   }
 
-  static String? cardNumber(String? value) {
-    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-    final amex = digits.startsWith('34') || digits.startsWith('37');
-    if (amex && digits.length != 15) return 'American Express usa 15 dígitos en esta demostración.';
-    if (!amex && digits.length != 16) return 'La tarjeta debe tener 16 dígitos.';
-    return null;
-  }
+  static String? cardNumber(String? value) => CardRules.numberError(value);
 
-  static String? expiryFormat(String? value) {
-    final text = (value ?? '').trim();
-    final match = RegExp(r'^(\d{2})/(\d{2})$').firstMatch(text);
-    if (match == null) return 'Usa el formato MM/AA.';
-    final month = int.parse(match.group(1)!);
-    if (month < 1 || month > 12) return 'El mes no es válido.';
-    return null;
-  }
+  static String? cardHolder(String? value) => CardRules.holderError(value);
 
-  static String? expiry(String? value) {
-    final format = expiryFormat(value);
-    if (format != null) return format;
-    final match = RegExp(r'^(\d{2})/(\d{2})$').firstMatch(value!.trim())!;
-    final month = int.parse(match.group(1)!);
-    final year = 2000 + int.parse(match.group(2)!);
-    final now = DemoClock.now;
-    final expired = year < now.year || (year == now.year && month < now.month);
-    if (expired) return 'La tarjeta está vencida.';
-    return null;
-  }
+  static String? expiryFormat(String? value) => CardRules.expiryError(value);
 
-  static String? cvv(String? value) {
-    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 3 || digits.length > 4) return 'CVV inválido.';
-    return null;
-  }
+  static String? expiry(String? value) => CardRules.expiryError(value, rejectExpired: true);
+
+  static String? cvv(String? value, {String? pan}) => CardRules.cvvError(value, pan: pan);
 
   static String? otp(String? value) {
     final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');

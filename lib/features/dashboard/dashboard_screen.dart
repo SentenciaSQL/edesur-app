@@ -12,6 +12,7 @@ import '../../domain/logic/selectors.dart';
 import '../../shared/labels.dart';
 import '../../shared/widgets/common.dart';
 import '../consumption/consumption_charts.dart';
+import 'quick_access_sheet.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -45,6 +46,7 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   const EdesurLogo(height: 36),
                   const Spacer(),
+                  const QuickAccessButton(),
                   const AssistantButton(),
                   _Bell(count: snapshot.unreadCount),
                 ],

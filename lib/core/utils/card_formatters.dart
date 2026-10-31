@@ -17,14 +17,12 @@ class ExpiryFormatter extends TextInputFormatter {
 }
 
 class CvvFormatter extends TextInputFormatter {
-  CvvFormatter(this.maxDigits);
-  final int Function() maxDigits;
+  const CvvFormatter();
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     var code = CardRules.digits(newValue.text);
-    final max = maxDigits();
-    if (code.length > max) code = code.substring(0, max);
+    if (code.length > CardRules.cvvMax) code = code.substring(0, CardRules.cvvMax);
     final cursor = _digitsBefore(newValue.text, newValue.selection.end).clamp(0, code.length);
     return TextEditingValue(text: code, selection: TextSelection.collapsed(offset: cursor));
   }

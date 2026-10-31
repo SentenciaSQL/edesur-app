@@ -168,7 +168,7 @@ class AddCardUseCase {
     if (holderError != null) throw DemoException(holderError);
     final expiryError = CardRules.expiryError(expiry, rejectExpired: true);
     if (expiryError != null) throw DemoException(expiryError);
-    final cvvError = CardRules.cvvError(cvv, pan: number);
+    final cvvError = CardRules.cvvError(cvv);
     if (cvvError != null) throw DemoException(cvvError);
     final draft = CardRules.draft(number: number, holderName: holderName, expiry: expiry, funding: funding);
     if (draft == null) {

@@ -64,7 +64,7 @@ class Validators {
 
   static String? expiry(String? value) => CardRules.expiryError(value, rejectExpired: true);
 
-  static String? cvv(String? value, {String? pan}) => CardRules.cvvError(value, pan: pan);
+  static String? cvv(String? value) => CardRules.cvvError(value);
 
   static String? otp(String? value) {
     final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');

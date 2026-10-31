@@ -49,12 +49,12 @@ En Modo demostración se puede cargar un solo contrato propio, varios propios, p
 
 ### Tarjetas de prueba
 
-La cuenta ya tiene una Visa crédito •••• 1111 y una Mastercard débito •••• 4444. Al agregar una tarjeta el formulario agrupa el número de cuatro en cuatro, detecta Visa, Mastercard o American Express, aplica el algoritmo de Luhn y exige CVV de 3 dígitos (4 en American Express). Solo se guardan la marca, los últimos cuatro dígitos, el nombre, el vencimiento y el tipo. El número completo y el CVV se descartan y no se envían.
+La cuenta ya tiene una Visa crédito •••• 1111 y una Mastercard débito •••• 4444. Al agregar una tarjeta el formulario agrupa el número de cuatro en cuatro, detecta Visa, Mastercard o American Express, aplica el algoritmo de Luhn y exige un CVV de 3 o 4 dígitos. Solo se guardan la marca, los últimos cuatro dígitos, el nombre, el vencimiento y el tipo. El número completo y el CVV se descartan y no se envían.
 
 En **Agregar tarjeta** y al escribir otra tarjeta en el pago no se acepta un vencimiento anterior al 31/10/2026. El mensaje aparece debajo del campo.
 
 - Éxito: `4111 1111 1111 1111` o Mastercard `5555 5555 5555 4444`
-- American Express: `3714 4963 5398 431`, CVV de 4 dígitos
+- American Express: `3714 4963 5398 431`, con CVV de 3 o 4 dígitos
 - Rechazo: `4111 1131 1111 0002`
 - Error de procesamiento: `4111 1161 1111 0005`
 - Vencida: `01/26` se rechaza en el formulario
@@ -63,7 +63,7 @@ La fecha de referencia de la presentación es el **31/10/2026**. Los vencimiento
 
 ### Pagos simulados
 
-- Tarjeta exitosa: `4111 1111 1111 1111`, vencimiento futuro, CVV `123`.
+- Tarjeta exitosa: `4111 1111 1111 1111`, vencimiento futuro, CVV `123` o `1234`.
 - Tarjeta rechazada: `4111 1131 1111 0002`.
 - También existe el interruptor **Forzar rechazo** en la confirmación.
 - No se procesa ningún cargo real.

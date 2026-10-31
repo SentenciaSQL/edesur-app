@@ -141,20 +141,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
   }
 
   void _touch(TextEditingController controller) {
-    _edited[controller] = true;
-    if (controller == _number) {
-      final max = CardRules.cvvLength(_number.text);
-      final code = CardRules.digits(_cvv.text);
-      if (code.length > max) {
-        _cvv.value = TextEditingValue(text: code.substring(0, max), selection: TextSelection.collapsed(offset: max));
-      }
-    }
-    setState(() {});
-    if (controller == _number && (_attempted || (_edited[_cvv] ?? false))) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _form.currentState?.validate();
-      });
-    }
+    setState(() => _edited[controller] = true);
   }
 
   bool _showStatus(TextEditingController controller) => _attempted || (_edited[controller] ?? false);
@@ -296,13 +283,13 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
                           decoration: _decoration(
                             label: 'CVV',
                             controller: _cvv,
-                            error: Validators.cvv(_cvv.text, pan: _number.text),
+                            error: Validators.cvv(_cvv.text),
                           ),
                           keyboardType: TextInputType.number,
                           obscureText: true,
-                          inputFormatters: [CvvFormatter(() => CardRules.cvvLength(_number.text))],
+                          inputFormatters: const [CvvFormatter()],
                           onChanged: (_) => _touch(_cvv),
-                          validator: (value) => Validators.cvv(value, pan: _number.text),
+                          validator: Validators.cvv,
                         ),
                       ),
                     ],

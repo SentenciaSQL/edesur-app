@@ -1,6 +1,10 @@
+import '../../core/billing/card_rules.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/mock/mock_seed.dart';
 import '../../core/utils/demo_exception.dart';
+import '../../core/utils/formatters.dart';
 import '../entities/entities.dart';
+import '../logic/selectors.dart';
 import '../repositories/repositories.dart';
 
 class SignInUseCase {
@@ -39,37 +43,132 @@ class VerifyIdentityUseCase {
   }
 }
 
-class PayInvoiceUseCase {
-  PayInvoiceUseCase(this._billing);
-  final BillingRepository _billing;
+class ContractLookup {
+  const ContractLookup({required this.result, this.supply});
+  final LinkLookupResult result;
+  final SupplyBundle? supply;
+}
 
-  Future<PaymentReceipt> execute({
+class LinkContractUseCase {
+  const LinkContractUseCase();
+
+  ContractLookup lookup({
     required DemoSnapshot snapshot,
-    required String invoiceId,
-    required PaymentMethod method,
-    String? cardNumber,
-    bool forceFailure = false,
+    required String number,
+    required String cedula,
+    required String holderName,
   }) {
-    final invoice = snapshot.invoiceById(invoiceId);
-    if (invoice == null) throw DemoException('No encontramos la factura.');
-    if (invoice.status == InvoiceStatus.paid) {
-      throw DemoException('Esta factura ya está pagada.');
+    final normalized = number.trim();
+    if (snapshot.contracts.any((contract) => contract.number == normalized)) {
+      return const ContractLookup(result: LinkLookupResult.alreadyLinked);
     }
-    final digits = (cardNumber ?? '').replaceAll(RegExp(r'\D'), '');
-    final rejected = forceFailure || (method == PaymentMethod.card && digits.endsWith('0002'));
-    if (rejected) {
-      throw DemoException('El banco simulado rechazó la transacción. No se realizó ningún cargo.');
-    }
-    final last4 = digits.length >= 4 ? digits.substring(digits.length - 4) : null;
-    return _billing.registerPayment(invoiceId: invoiceId, method: method, cardLast4: last4);
+    final supply = MockSeed.lookupSupply(normalized);
+    if (supply == null) return const ContractLookup(result: LinkLookupResult.missing);
+    final cedulaOk = supply.contract.isOwnedBy(cedula);
+    final nameOk = normalizeText(holderName) == normalizeText(supply.contract.holderName);
+    if (!cedulaOk || !nameOk) return const ContractLookup(result: LinkLookupResult.holderMismatch);
+    return ContractLookup(result: LinkLookupResult.found, supply: supply);
   }
 }
 
-extension _Lookup on DemoSnapshot {
-  Invoice? invoiceById(String id) {
-    for (final invoice in invoices) {
-      if (invoice.id == id) return invoice;
+class UnlinkContractUseCase {
+  const UnlinkContractUseCase();
+
+  void check(DemoSnapshot snapshot, String contractId) {
+    ContractAccount? contract;
+    for (final item in snapshot.contracts) {
+      if (item.id == contractId) contract = item;
     }
-    return null;
+    if (contract == null) throw DemoException('No encontramos ese contrato.');
+    if (contract.isOwnedBy(snapshot.user.cedula)) {
+      throw DemoException(AppConstants.cannotUnlinkOwnContract);
+    }
+  }
+}
+
+class PayInvoicesUseCase {
+  PayInvoicesUseCase(this._billing);
+  final BillingRepository _billing;
+
+  Future<PaymentTransaction> execute({
+    required DemoSnapshot snapshot,
+    required List<String> invoiceIds,
+    required PaymentMethod method,
+    required bool forceFailure,
+    String? cardNumber,
+    String? expiry,
+    String? holderName,
+    SavedCard? savedCard,
+  }) {
+    final unique = invoiceIds.toSet().toList();
+    if (unique.isEmpty) throw DemoException('Selecciona al menos un contrato con balance pendiente.');
+    final invoices = <Invoice>[];
+    for (final id in unique) {
+      final invoice = snapshot.invoiceById(id);
+      if (invoice == null) throw DemoException('No encontramos una de las facturas seleccionadas.');
+      if (invoice.status == InvoiceStatus.paid || invoice.total <= 0) {
+        throw DemoException('Una de las facturas ya no tiene balance pendiente.');
+      }
+      invoices.add(invoice);
+    }
+    final total = invoices.fold<double>(0, (sum, invoice) => sum + invoice.total);
+    if (total <= 0) throw DemoException('El total a pagar debe ser mayor que cero.');
+
+    String? last4 = savedCard?.last4;
+    int? month = savedCard?.expiryMonth;
+    int? year = savedCard?.expiryYear;
+    var brand = savedCard?.brand;
+    var holder = savedCard?.holderName;
+    if (method == PaymentMethod.card && savedCard == null) {
+      final draft = CardRules.draft(
+        number: cardNumber ?? '',
+        holderName: holderName ?? '',
+        expiry: expiry ?? '',
+        funding: CardFunding.credit,
+      );
+      if (draft == null) throw DemoException('Revisa el número, la marca y el vencimiento de la tarjeta de prueba.');
+      last4 = draft.last4;
+      month = draft.expiryMonth;
+      year = draft.expiryYear;
+      brand = draft.brand;
+      holder = draft.holderName;
+    }
+    final status = CardRules.outcome(
+      method: method,
+      forceFailure: forceFailure,
+      last4: last4,
+      expiryMonth: month,
+      expiryYear: year,
+    );
+    return _billing.settle(
+      invoiceIds: unique,
+      method: method,
+      status: status,
+      cardBrand: brand,
+      cardLast4: last4,
+      cardHolder: holder,
+      message: status == PaymentStatus.approved ? null : CardRules.failureMessage(status),
+    );
+  }
+}
+
+class AddCardUseCase {
+  const AddCardUseCase();
+
+  CardDraft prepare({
+    required String number,
+    required String holderName,
+    required String expiry,
+    required String cvv,
+    required CardFunding funding,
+  }) {
+    if ((cvv.replaceAll(RegExp(r'\D'), '').length) < 3) {
+      throw DemoException('El CVV de demostración no es válido.');
+    }
+    final draft = CardRules.draft(number: number, holderName: holderName, expiry: expiry, funding: funding);
+    if (draft == null || CardRules.detectBrand(number) == null) {
+      throw DemoException('Usa un número de prueba Visa, Mastercard o American Express.');
+    }
+    return draft;
   }
 }

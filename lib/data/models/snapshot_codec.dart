@@ -34,12 +34,17 @@ class SnapshotCodec {
         'announcements': s.announcements.map(_announcement).toList(),
         'mapIncidents': s.mapIncidents.map(_incident).toList(),
         'receipts': s.receipts.map(_receipt).toList(),
+        'transactions': s.transactions.map(_transaction).toList(),
+        'cards': s.cards.map(_card).toList(),
         'messages': s.messages.map(_message).toList(),
         'prefs': _prefs(s.prefs),
         'scenario': s.scenario.name,
         'reportSequence': s.reportSequence,
         'requestSequence': s.requestSequence,
         'receiptSequence': s.receiptSequence,
+        'transactionSequence': s.transactionSequence,
+        'cardSequence': s.cardSequence,
+        'portfolio': s.portfolio.name,
         'lastUpdated': s.lastUpdated.toIso8601String(),
         'lastAccess': s.lastAccess?.toIso8601String(),
       };
@@ -60,12 +65,17 @@ class SnapshotCodec {
       announcements: _list(map['announcements']).map((item) => _readAnnouncement(_map(item))).toList(),
       mapIncidents: _list(map['mapIncidents']).map((item) => _readIncident(_map(item))).toList(),
       receipts: _list(map['receipts']).map((item) => _readReceipt(_map(item))).toList(),
+      transactions: _list(map['transactions']).map((item) => _readTransaction(_map(item))).toList(),
+      cards: _list(map['cards']).map((item) => _readCard(_map(item))).toList(),
       messages: _list(map['messages']).map((item) => _readMessage(_map(item))).toList(),
       prefs: _readPrefs(_map(map['prefs'])),
       scenario: _enum(DemoScenario.values, map['scenario']),
       reportSequence: _int(map['reportSequence']),
       requestSequence: _int(map['requestSequence']),
       receiptSequence: _int(map['receiptSequence']),
+      transactionSequence: _int(map['transactionSequence']),
+      cardSequence: _int(map['cardSequence']),
+      portfolio: _enum(PortfolioPreset.values, map['portfolio']),
       lastUpdated: DateTime.parse(map['lastUpdated'] as String),
       lastAccess: map['lastAccess'] == null ? null : DateTime.parse(map['lastAccess'] as String),
     );
@@ -107,6 +117,7 @@ class SnapshotCodec {
         'mapY': c.mapY,
         'latitude': c.latitude,
         'longitude': c.longitude,
+        'alias': c.alias,
       };
 
   static ContractAccount _readContract(Map<String, dynamic> m) => ContractAccount(
@@ -129,6 +140,7 @@ class SnapshotCodec {
         mapY: _double(m['mapY']),
         latitude: _double(m['latitude']),
         longitude: _double(m['longitude']),
+        alias: m['alias'] as String? ?? '',
       );
 
   static Map<String, dynamic> _invoice(Invoice i) => {
@@ -355,6 +367,9 @@ class SnapshotCodec {
         'paidAt': r.paidAt.toIso8601String(),
         'reference': r.reference,
         'authorization': r.authorization,
+        'transactionId': r.transactionId,
+        'cardBrand': r.cardBrand?.name,
+        'cardLast4': r.cardLast4,
       };
 
   static PaymentReceipt _readReceipt(Map<String, dynamic> m) => PaymentReceipt(
@@ -368,6 +383,83 @@ class SnapshotCodec {
         paidAt: DateTime.parse(m['paidAt'] as String),
         reference: m['reference'] as String,
         authorization: m['authorization'] as String,
+        transactionId: m['transactionId'] as String?,
+        cardBrand: m['cardBrand'] == null ? null : _enum(CardBrand.values, m['cardBrand']),
+        cardLast4: m['cardLast4'] as String?,
+      );
+
+  static Map<String, dynamic> _card(SavedCard c) => {
+        'id': c.id,
+        'brand': c.brand.name,
+        'funding': c.funding.name,
+        'last4': c.last4,
+        'holderName': c.holderName,
+        'expiryMonth': c.expiryMonth,
+        'expiryYear': c.expiryYear,
+        'isDefault': c.isDefault,
+      };
+
+  static SavedCard _readCard(Map<String, dynamic> m) => SavedCard(
+        id: m['id'] as String,
+        brand: _enum(CardBrand.values, m['brand']),
+        funding: _enum(CardFunding.values, m['funding']),
+        last4: m['last4'] as String,
+        holderName: m['holderName'] as String,
+        expiryMonth: _int(m['expiryMonth']),
+        expiryYear: _int(m['expiryYear']),
+        isDefault: m['isDefault'] as bool,
+      );
+
+  static Map<String, dynamic> _line(PaymentLine line) => {
+        'contractId': line.contractId,
+        'contractNumber': line.contractNumber,
+        'alias': line.alias,
+        'holderName': line.holderName,
+        'address': line.address,
+        'invoiceId': line.invoiceId,
+        'invoiceNumber': line.invoiceNumber,
+        'amount': line.amount,
+        'receiptId': line.receiptId,
+      };
+
+  static PaymentLine _readLine(Map<String, dynamic> m) => PaymentLine(
+        contractId: m['contractId'] as String,
+        contractNumber: m['contractNumber'] as String,
+        alias: m['alias'] as String? ?? '',
+        holderName: m['holderName'] as String,
+        address: m['address'] as String,
+        invoiceId: m['invoiceId'] as String,
+        invoiceNumber: m['invoiceNumber'] as String,
+        amount: _double(m['amount']),
+        receiptId: m['receiptId'] as String?,
+      );
+
+  static Map<String, dynamic> _transaction(PaymentTransaction t) => {
+        'id': t.id,
+        'number': t.number,
+        'paidAt': t.paidAt.toIso8601String(),
+        'method': t.method.name,
+        'status': t.status.name,
+        'total': t.total,
+        'lines': t.lines.map(_line).toList(),
+        'cardBrand': t.cardBrand?.name,
+        'cardLast4': t.cardLast4,
+        'cardHolder': t.cardHolder,
+        'message': t.message,
+      };
+
+  static PaymentTransaction _readTransaction(Map<String, dynamic> m) => PaymentTransaction(
+        id: m['id'] as String,
+        number: m['number'] as String,
+        paidAt: DateTime.parse(m['paidAt'] as String),
+        method: _enum(PaymentMethod.values, m['method']),
+        status: _enum(PaymentStatus.values, m['status']),
+        total: _double(m['total']),
+        lines: _list(m['lines']).map((item) => _readLine(_map(item))).toList(),
+        cardBrand: m['cardBrand'] == null ? null : _enum(CardBrand.values, m['cardBrand']),
+        cardLast4: m['cardLast4'] as String?,
+        cardHolder: m['cardHolder'] as String?,
+        message: m['message'] as String?,
       );
 
   static Map<String, dynamic> _message(ChatMessage m) => {

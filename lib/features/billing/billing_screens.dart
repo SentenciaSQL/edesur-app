@@ -39,7 +39,14 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(onPressed: () => context.push(Routes.multiPay), child: const Text('Pagar varios contratos')),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Row(
                 children: [
                   Expanded(child: _Filter(label: _year, values: years, onChanged: (value) => setState(() => _year = value))),
@@ -257,6 +264,8 @@ class ReceiptScreen extends ConsumerWidget {
                     InfoLine(label: 'Factura', value: receipt.invoiceNumber),
                     InfoLine(label: 'Contrato', value: receipt.contractNumber),
                     InfoLine(label: 'Método', value: paymentMethodLabel(receipt.method)),
+                    if (receipt.cardLast4 != null)
+                      InfoLine(label: 'Tarjeta', value: '${cardBrandLabel(receipt.cardBrand!)} •••• ${receipt.cardLast4}'),
                     InfoLine(label: 'Referencia', value: receipt.reference),
                     InfoLine(label: 'Autorización', value: receipt.authorization),
                     InfoLine(label: 'Fecha', value: formatDateTime(receipt.paidAt)),
@@ -266,6 +275,8 @@ class ReceiptScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const Text('Comprobante ficticio. No se realizó una transacción real.', style: TextStyle(color: AppColors.muted)),
+              if (receipt.transactionId != null)
+                TextButton(onPressed: () => context.push(Routes.transaction(receipt.transactionId!)), child: const Text('Ver operación completa')),
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: () async {

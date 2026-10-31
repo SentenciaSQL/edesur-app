@@ -162,11 +162,16 @@ class AddCardUseCase {
     required String cvv,
     required CardFunding funding,
   }) {
-    if ((cvv.replaceAll(RegExp(r'\D'), '').length) < 3) {
-      throw DemoException('El CVV de demostración no es válido.');
-    }
+    final numberError = CardRules.numberError(number);
+    if (numberError != null) throw DemoException(numberError);
+    final holderError = CardRules.holderError(holderName);
+    if (holderError != null) throw DemoException(holderError);
+    final expiryError = CardRules.expiryError(expiry, rejectExpired: true);
+    if (expiryError != null) throw DemoException(expiryError);
+    final cvvError = CardRules.cvvError(cvv, pan: number);
+    if (cvvError != null) throw DemoException(cvvError);
     final draft = CardRules.draft(number: number, holderName: holderName, expiry: expiry, funding: funding);
-    if (draft == null || CardRules.detectBrand(number) == null) {
+    if (draft == null) {
       throw DemoException('Usa un número de prueba Visa, Mastercard o American Express.');
     }
     return draft;

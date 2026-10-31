@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/app_controller.dart';
 import '../../core/billing/card_rules.dart';
-import '../../core/mock/demo_clock.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/card_formatters.dart';
 import '../../core/utils/demo_exception.dart';
 import '../../core/utils/validators.dart';
 import '../../domain/entities/entities.dart';
@@ -129,6 +128,8 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
   bool _default = false;
   CardDraft? _draft;
   bool _busy = false;
+  bool _attempted = false;
+  final _edited = <TextEditingController, bool>{};
 
   @override
   void dispose() {
@@ -139,7 +140,48 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     super.dispose();
   }
 
+  void _touch(TextEditingController controller) {
+    _edited[controller] = true;
+    if (controller == _number) {
+      final max = CardRules.cvvLength(_number.text);
+      final code = CardRules.digits(_cvv.text);
+      if (code.length > max) {
+        _cvv.value = TextEditingValue(text: code.substring(0, max), selection: TextSelection.collapsed(offset: max));
+      }
+    }
+    setState(() {});
+    if (controller == _number && (_attempted || (_edited[_cvv] ?? false))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _form.currentState?.validate();
+      });
+    }
+  }
+
+  bool _showStatus(TextEditingController controller) => _attempted || (_edited[controller] ?? false);
+
+  InputDecoration _decoration({
+    required String label,
+    required TextEditingController controller,
+    required String? error,
+    String? hint,
+  }) {
+    final show = _showStatus(controller);
+    final valid = show && error == null && controller.text.trim().isNotEmpty;
+    final invalid = show && error != null;
+    final radius = BorderRadius.circular(14);
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      suffixIcon: !valid && !invalid
+          ? null
+          : Icon(valid ? Icons.check_circle_rounded : Icons.error_outline_rounded, color: valid ? AppColors.green : AppColors.red),
+      enabledBorder: valid ? OutlineInputBorder(borderRadius: radius, borderSide: const BorderSide(color: AppColors.green)) : null,
+      focusedBorder: valid ? OutlineInputBorder(borderRadius: radius, borderSide: const BorderSide(color: AppColors.green, width: 1.6)) : null,
+    );
+  }
+
   Future<void> _preview() async {
+    setState(() => _attempted = true);
     if (!_form.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
@@ -188,47 +230,79 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
           if (draft == null)
             Form(
               key: _form,
+              autovalidateMode: _attempted ? AutovalidateMode.always : AutovalidateMode.onUserInteraction,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Usa solo números de prueba. Visa empieza en 4, Mastercard en 51–55 y American Express en 34 o 37.'),
+                  const Text(
+                    'Usa solo números de prueba. Visa 4111 1111 1111 1111, Mastercard 5555 5555 5555 4444 y American Express 3714 4963 5398 431. El número completo y el CVV no se guardan ni se envían.',
+                  ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _number,
-                    decoration: const InputDecoration(labelText: 'Número de tarjeta'),
+                    decoration: _decoration(
+                      label: 'Número de tarjeta',
+                      controller: _number,
+                      error: Validators.cardNumber(_number.text),
+                    ),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d\s]'))],
-                    validator: (value) {
-                      final format = Validators.cardNumber(value);
-                      if (format != null) return format;
-                      if (CardRules.detectBrand(value ?? '') == null) return 'No reconocemos la marca de este número de prueba.';
-                      return null;
-                    },
+                    inputFormatters: [CardNumberFormatter()],
+                    onChanged: (_) => _touch(_number),
+                    validator: Validators.cardNumber,
                   ),
+                  if (CardRules.brandFromPrefix(_number.text) != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Marca detectada: ${cardBrandLabel(CardRules.brandFromPrefix(_number.text)!)}',
+                      style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _name,
-                    decoration: const InputDecoration(labelText: 'Nombre del titular'),
-                    textCapitalization: TextCapitalization.characters,
-                    validator: (value) => Validators.required(value, label: 'El nombre'),
+                    decoration: _decoration(
+                      label: 'Nombre del titular',
+                      controller: _name,
+                      error: Validators.cardHolder(_name.text),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CardHolderFormatter()],
+                    onChanged: (_) => _touch(_name),
+                    validator: Validators.cardHolder,
                   ),
                   const SizedBox(height: 12),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _expiry,
-                          decoration: const InputDecoration(labelText: 'Vencimiento', hintText: 'MM/AA'),
-                          validator: Validators.expiryFormat,
+                          decoration: _decoration(
+                            label: 'Vencimiento',
+                            hint: 'MM/AA',
+                            controller: _expiry,
+                            error: Validators.expiry(_expiry.text),
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [ExpiryFormatter()],
+                          onChanged: (_) => _touch(_expiry),
+                          validator: Validators.expiry,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _cvv,
-                          decoration: const InputDecoration(labelText: 'CVV'),
+                          decoration: _decoration(
+                            label: 'CVV',
+                            controller: _cvv,
+                            error: Validators.cvv(_cvv.text, pan: _number.text),
+                          ),
+                          keyboardType: TextInputType.number,
                           obscureText: true,
-                          validator: Validators.cvv,
+                          inputFormatters: [CvvFormatter(() => CardRules.cvvLength(_number.text))],
+                          onChanged: (_) => _touch(_cvv),
+                          validator: (value) => Validators.cvv(value, pan: _number.text),
                         ),
                       ),
                     ],
@@ -268,10 +342,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            if (draft.isExpiredAt(DemoClock.now))
-              const Text('Esta tarjeta está vencida. Se puede guardar para demostrar un pago rechazado por vencimiento.', style: TextStyle(color: AppColors.amber)),
-            const SizedBox(height: 8),
-            const Text('Confirmamos la simulación. Al guardar se descartan el número completo y el CVV.'),
+            const Text('Confirmamos la simulación. El número completo y el CVV ya se descartaron y no se envían a ningún servicio.'),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _default,

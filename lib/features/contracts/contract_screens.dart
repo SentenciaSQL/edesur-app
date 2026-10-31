@@ -10,6 +10,7 @@ import '../../core/routing/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/demo_exception.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/identity_formatters.dart';
 import '../../core/utils/validators.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/logic/selectors.dart';
@@ -273,28 +274,27 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
   final _form = GlobalKey<FormState>();
   final _number = TextEditingController();
   final _cedula = TextEditingController();
-  final _name = TextEditingController();
   final _alias = TextEditingController();
   bool _busy = false;
+  bool _attempted = false;
   ContractLookup? _lookup;
 
   @override
   void dispose() {
     _number.dispose();
     _cedula.dispose();
-    _name.dispose();
     _alias.dispose();
     super.dispose();
   }
 
   Future<void> _search() async {
+    setState(() => _attempted = true);
     if (!_form.currentState!.validate()) return;
     setState(() => _busy = true);
     await Future<void>.delayed(const Duration(milliseconds: 700));
     final lookup = ref.read(appControllerProvider.notifier).lookupContract(
           number: _number.text,
           cedula: _cedula.text,
-          holderName: _name.text,
         );
     if (mounted) {
       setState(() {
@@ -333,6 +333,83 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
     }
   }
 
+  String _balanceLabel(SupplyBundle supply) {
+    final balance = supply.invoices
+        .where((invoice) => invoice.status != InvoiceStatus.paid)
+        .fold<double>(0, (sum, invoice) => sum + invoice.total);
+    if (balance <= 0) return 'Sin deuda';
+    return formatMoney(balance);
+  }
+
+  double _listedBalance(ContractAccount contract, DemoSnapshot? snapshot) {
+    if (snapshot != null && snapshot.contracts.any((item) => item.id == contract.id)) {
+      return snapshot.invoices
+          .where((invoice) => invoice.contractId == contract.id && invoice.status != InvoiceStatus.paid)
+          .fold<double>(0, (sum, invoice) => sum + invoice.total);
+    }
+    return MockSeed.openBalance(contract);
+  }
+
+  void _useSample(ContractAccount contract) {
+    _number.text = contract.number;
+    _cedula.text = contract.cedula;
+    setState(() => _lookup = null);
+  }
+
+  void _showSamples() {
+    final snapshot = ref.read(appControllerProvider).value;
+    final linked = <String>{
+      if (snapshot != null)
+        for (final contract in snapshot.contracts) contract.number.replaceAll(RegExp(r'\D'), ''),
+    };
+    final account = snapshot?.contracts.where((contract) => contract.number.replaceAll(RegExp(r'\D'), '').length == 7).toList() ??
+        const <ContractAccount>[];
+    final available = MockSeed.linkableSupplies().where((contract) => !linked.contains(contract.number)).toList();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        final maxHeight = MediaQuery.sizeOf(context).height * 0.8;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            children: [
+              const Text('Contratos de demostración', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+              const SizedBox(height: 6),
+              const Text(
+                'Toca un suministro para copiar el número y la cédula. El número 0000000 no existe.',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              const SizedBox(height: 12),
+              const Text('Disponibles para vincular', style: TextStyle(fontWeight: FontWeight.w700)),
+              for (final contract in available) _sampleTile(contract, linked: false, balance: _listedBalance(contract, snapshot)),
+              const SizedBox(height: 12),
+              const Text('Ya vinculados a tu cuenta', style: TextStyle(fontWeight: FontWeight.w700)),
+              if (account.isEmpty) const Text('Todavía no hay contratos de 7 dígitos en la cuenta.'),
+              for (final contract in account) _sampleTile(contract, linked: true, balance: _listedBalance(contract, snapshot)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sampleTile(ContractAccount contract, {required bool linked, required double balance}) {
+    final debt = balance <= 0 ? 'Sin deuda' : formatMoney(balance);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text('${contract.number} · ${contract.holderName}'),
+      subtitle: Text('${contract.cedula} · ${contract.clientType} · $debt'),
+      trailing: Text(linked ? 'Vinculado' : 'Disponible', style: TextStyle(color: linked ? AppColors.muted : AppColors.navy, fontWeight: FontWeight.w600)),
+      onTap: () {
+        _useSample(contract);
+        Navigator.pop(context);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lookup = _lookup;
@@ -343,31 +420,36 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'La verificación es simulada. Prueba 1009900112 con cédula 001-9988776-6 y titular Carmen Díaz. Un número como 1000000000 no existe. 1002345678 ya está vinculado.',
+            'La búsqueda consulta el repositorio local de suministros de demostración. El número tiene 7 dígitos y la cédula usa el formato 000-0000000-0.',
           ),
-          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(onPressed: _showSamples, child: const Text('Ver contratos disponibles para demostración')),
+          ),
           Form(
             key: _form,
+            autovalidateMode: _attempted ? AutovalidateMode.always : AutovalidateMode.onUserInteraction,
             child: Column(
               children: [
                 TextFormField(
                   controller: _number,
-                  decoration: const InputDecoration(labelText: 'Número de contrato'),
+                  decoration: InputDecoration(
+                    labelText: 'Número de contrato',
+                    counterText: '${_number.text.replaceAll(RegExp(r'\D'), '').length}/7',
+                  ),
                   keyboardType: TextInputType.number,
-                  validator: (value) => Validators.required(value, label: 'El número de contrato'),
+                  inputFormatters: const [ContractNumberFormatter()],
+                  onChanged: (_) => setState(() => _lookup = null),
+                  validator: Validators.contractNumber,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _cedula,
-                  decoration: const InputDecoration(labelText: 'Cédula del titular'),
-                  validator: Validators.cedula,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _name,
-                  decoration: const InputDecoration(labelText: 'Nombre del titular'),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) => Validators.required(value, label: 'El nombre del titular'),
+                  decoration: const InputDecoration(labelText: 'Cédula del titular', hintText: '000-0000000-0'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: const [CedulaFormatter()],
+                  onChanged: (_) => setState(() => _lookup = null),
+                  validator: Validators.holderCedula,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -384,9 +466,9 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
             AppCard(
               color: lookup.result == LinkLookupResult.found ? AppColors.white : AppColors.redSoft,
               child: switch (lookup.result) {
-                LinkLookupResult.missing => const Text('No encontramos un suministro con ese número de contrato.'),
-                LinkLookupResult.alreadyLinked => const Text('Este contrato ya está vinculado a tu cuenta.'),
-                LinkLookupResult.holderMismatch => const Text('La cédula o el nombre no corresponden al titular registrado de este contrato.'),
+                LinkLookupResult.missing => const Text('No encontramos un suministro asociado a este número de contrato'),
+                LinkLookupResult.alreadyLinked => const Text('Este contrato ya se encuentra vinculado a tu cuenta'),
+                LinkLookupResult.holderMismatch => const Text('La información proporcionada no coincide con los datos del titular del suministro'),
                 LinkLookupResult.found => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -394,10 +476,16 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
                       const SizedBox(height: 8),
                       InfoLine(label: 'Contrato', value: supply!.contract.number),
                       InfoLine(label: 'Titular', value: supply.contract.holderName),
+                      InfoLine(label: 'Cédula', value: supply.contract.cedula),
                       InfoLine(label: 'Dirección', value: supply.contract.address),
                       InfoLine(label: 'Sector', value: supply.contract.sector),
-                      InfoLine(label: 'Tipo', value: supply.contract.clientType),
+                      InfoLine(label: 'Municipio', value: supply.contract.municipality),
+                      if (supply.contract.province.isNotEmpty) InfoLine(label: 'Provincia', value: supply.contract.province),
+                      InfoLine(label: 'Tipo de cliente', value: supply.contract.clientType),
+                      InfoLine(label: 'Tarifa', value: supply.contract.tariffName),
+                      InfoLine(label: 'Circuito', value: supply.contract.circuit),
                       InfoLine(label: 'Estado', value: serviceStatusLabel(supply.contract.serviceStatus)),
+                      InfoLine(label: 'Balance', value: _balanceLabel(supply)),
                     ],
                   ),
               },

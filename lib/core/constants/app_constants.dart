@@ -18,7 +18,7 @@ class AppConstants {
   static const markAsset = 'assets/branding/edesur_mark.png';
   static const demoPhotoAsset = 'assets/demo/foto_averia.png';
 
-  static const schemaVersion = 2;
+  static const schemaVersion = 3;
   static const cannotUnlinkOwnContract =
       'No puedes eliminar este contrato porque figuras como su titular. Para gestionar la titularidad del suministro, debes realizar el trámite correspondiente con EDESUR.';
   static const storageKey = 'edesur_demo_snapshot_v1';

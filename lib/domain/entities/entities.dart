@@ -109,6 +109,7 @@ class ContractAccount {
     required this.address,
     required this.sector,
     required this.municipality,
+    this.province = '',
     required this.clientType,
     required this.tariffCode,
     required this.tariffName,
@@ -132,6 +133,7 @@ class ContractAccount {
   final String address;
   final String sector;
   final String municipality;
+  final String province;
   final String clientType;
   final String tariffCode;
   final String tariffName;
@@ -168,6 +170,7 @@ class ContractAccount {
       address: address ?? this.address,
       sector: sector ?? this.sector,
       municipality: municipality,
+      province: province,
       clientType: clientType,
       tariffCode: tariffCode,
       tariffName: tariffName,

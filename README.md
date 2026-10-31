@@ -43,7 +43,7 @@ También se puede entrar con **Entrar en modo demostración**, sin registro.
 
 Andrés es titular de la casa principal `1002345678` (pendiente), el apartamento `1008876543` (sin deuda) y el local `1005520198` (vencido). También tiene vinculados contratos de terceros: Rosa Frías `1004411223`, Luis Peña `1007788990` y Pedro Gómez `1006655443`. Esos se pueden desvincular. Los propios no.
 
-Para agregar otro suministro: contrato `1009900112`, cédula `001-9988776-6`, titular Carmen Díaz. El número `1000000000` no existe.
+Para agregar otro suministro el número tiene 7 dígitos y la cédula debe cumplir el formato `000-0000000-0` con dígito verificador. En Agregar contrato, **Ver contratos disponibles para demostración** lista los datos. Por ejemplo, `1045821` con cédula `001-3758602-0` (Carmen Díaz) se puede vincular. `4829103`, `5190042` y `6733188` ya están en la cuenta. `0000000` no existe. Si el número existe y la cédula es de otro titular, la verificación no coincide.
 
 En Modo demostración se puede cargar un solo contrato propio, varios propios, propios con terceros o solo terceros.
 

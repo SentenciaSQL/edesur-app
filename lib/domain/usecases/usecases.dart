@@ -2,7 +2,6 @@ import '../../core/billing/card_rules.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/mock/mock_seed.dart';
 import '../../core/utils/demo_exception.dart';
-import '../../core/utils/formatters.dart';
 import '../entities/entities.dart';
 import '../logic/selectors.dart';
 import '../repositories/repositories.dart';
@@ -56,17 +55,13 @@ class LinkContractUseCase {
     required DemoSnapshot snapshot,
     required String number,
     required String cedula,
-    required String holderName,
   }) {
-    final normalized = number.trim();
-    if (snapshot.contracts.any((contract) => contract.number == normalized)) {
-      return const ContractLookup(result: LinkLookupResult.alreadyLinked);
-    }
-    final supply = MockSeed.lookupSupply(normalized);
+    final digits = number.replaceAll(RegExp(r'\D'), '');
+    final linked = snapshot.contracts.any((contract) => contract.number.replaceAll(RegExp(r'\D'), '') == digits);
+    if (linked) return const ContractLookup(result: LinkLookupResult.alreadyLinked);
+    final supply = MockSeed.lookupSupply(digits);
     if (supply == null) return const ContractLookup(result: LinkLookupResult.missing);
-    final cedulaOk = supply.contract.isOwnedBy(cedula);
-    final nameOk = normalizeText(holderName) == normalizeText(supply.contract.holderName);
-    if (!cedulaOk || !nameOk) return const ContractLookup(result: LinkLookupResult.holderMismatch);
+    if (!supply.contract.isOwnedBy(cedula)) return const ContractLookup(result: LinkLookupResult.holderMismatch);
     return ContractLookup(result: LinkLookupResult.found, supply: supply);
   }
 }

@@ -11,7 +11,7 @@ Los colores y el logotipo salen de los recursos públicos de [edesur.com.do](htt
 - Rojo `#DC052D` para errores, interrupciones y estados críticos.
 - Tipografía Poppins, la misma familia del sitio. Los archivos provienen de Google Fonts y van incluidos en la aplicación para que la interfaz se vea igual sin red y compile en web.
 
-El logotipo es el archivo público `logo.png` del sitio. No se redibujó ni se sustituyó.
+El logotipo es el archivo público `logo.png` del sitio. No se redibujó ni se sustituyó. El icono de la aplicación usa el isotipo público del sitio, sobre fondo blanco.
 
 ## Cómo ejecutar
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/billing/card_rules.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/card_formatters.dart';
 import '../../core/utils/validators.dart';
@@ -162,8 +161,8 @@ class SimulatedPaymentFormState extends State<SimulatedPaymentForm> {
                       decoration: const InputDecoration(labelText: 'CVV'),
                       keyboardType: TextInputType.number,
                       obscureText: true,
-                      inputFormatters: [CvvFormatter(() => CardRules.cvvLength(_card.text))],
-                      validator: (value) => Validators.cvv(value, pan: _card.text),
+                      inputFormatters: const [CvvFormatter()],
+                      validator: Validators.cvv,
                     ),
                   ),
                 ],

@@ -31,7 +31,8 @@ class CardRules {
 
   static int maxDigits(String raw) => brandFromPrefix(raw) == CardBrand.amex ? 15 : 16;
 
-  static int cvvLength(String raw) => brandFromPrefix(raw) == CardBrand.amex ? 4 : 3;
+  static const cvvMin = 3;
+  static const cvvMax = 4;
 
   /// Marca reconocible por el prefijo, aunque el número todavía esté incompleto.
   static CardBrand? brandFromPrefix(String raw) {
@@ -158,17 +159,9 @@ class CardRules {
     return null;
   }
 
-  static String? cvvError(String? value, {String? pan}) {
+  static String? cvvError(String? value) {
     final code = digits(value ?? '');
-    if (pan != null) {
-      if (brandFromPrefix(pan) == CardBrand.amex) {
-        if (code.length != 4) return 'American Express usa un CVV de 4 dígitos.';
-        return null;
-      }
-      if (code.length != 3) return 'El CVV debe tener 3 dígitos.';
-      return null;
-    }
-    if (code.length < 3 || code.length > 4) return 'El CVV debe tener 3 o 4 dígitos.';
+    if (code.length < cvvMin || code.length > cvvMax) return 'El CVV debe tener 3 o 4 dígitos.';
     return null;
   }
 

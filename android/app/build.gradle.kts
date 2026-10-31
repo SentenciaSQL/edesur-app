@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.edesur.demo.edesur_movil"
+    namespace = "com.indra.vmo.sgc.edesur"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

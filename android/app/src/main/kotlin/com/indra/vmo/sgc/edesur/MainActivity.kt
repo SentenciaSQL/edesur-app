@@ -1,4 +1,4 @@
-package com.edesur.demo.edesur_movil
+package com.indra.vmo.sgc.edesur
 
 import io.flutter.embedding.android.FlutterActivity
 

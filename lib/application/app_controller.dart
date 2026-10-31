@@ -172,13 +172,11 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
   ContractLookup lookupContract({
     required String number,
     required String cedula,
-    required String holderName,
   }) {
     return const LinkContractUseCase().lookup(
       snapshot: _current,
       number: number,
       cedula: cedula,
-      holderName: holderName,
     );
   }
 

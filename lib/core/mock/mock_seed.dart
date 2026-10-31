@@ -17,14 +17,23 @@ class MockSeed {
   }
 
   static SupplyBundle? lookupSupply(String number) {
-    final normalized = number.trim();
+    final digits = number.replaceAll(RegExp(r'\D'), '');
     for (final contract in _linkable()) {
-      if (contract.number == normalized) {
+      if (contract.number == digits) {
         final history = _history(contract);
         return SupplyBundle(contract, history.invoices, history.months);
       }
     }
     return null;
+  }
+
+  static List<ContractAccount> linkableSupplies() => _linkable();
+
+  static double openBalance(ContractAccount contract) {
+    final history = _history(contract);
+    return history.invoices
+        .where((invoice) => invoice.status != InvoiceStatus.paid)
+        .fold<double>(0, (sum, invoice) => sum + invoice.total);
   }
 
   static DemoSnapshot _base() {
@@ -252,61 +261,270 @@ class MockSeed {
         longitude: -70.3310,
         alias: 'Colmado del primo',
       ),
+      _supply(
+        id: 'c9',
+        number: '4829103',
+        holderName: 'Laura Méndez',
+        cedula: '001-1392048-2',
+        address: 'Calle de la Ceiba Demo No. 8',
+        sector: 'Los Mina',
+        municipality: 'Santo Domingo Este',
+        province: 'Santo Domingo',
+        commercial: false,
+        circuit: 'LMN-09',
+        alias: 'Vecina',
+        mapX: 0.72,
+        mapY: 0.40,
+        latitude: 18.4780,
+        longitude: -69.8420,
+      ),
+      _supply(
+        id: 'c10',
+        number: '5190042',
+        holderName: 'José Almánzar',
+        cedula: '001-2847591-0',
+        address: 'Residencial Ejemplo Norte, Apartamento 4C',
+        sector: 'Pantoja',
+        municipality: 'Los Alcarrizos',
+        province: 'Santo Domingo',
+        commercial: false,
+        circuit: 'LAC-12',
+        alias: 'Apartamento del primo',
+        mapX: 0.38,
+        mapY: 0.28,
+        latitude: 18.5200,
+        longitude: -69.9900,
+      ),
+      _supply(
+        id: 'c11',
+        number: '6733188',
+        holderName: 'Marta Solano',
+        cedula: '402-1582736-7',
+        address: 'Avenida Comercial Demo No. 21',
+        sector: 'Madre Vieja',
+        municipality: 'San Cristóbal',
+        province: 'San Cristóbal',
+        commercial: true,
+        circuit: 'SCR-08',
+        alias: 'Colmado',
+        mapX: 0.32,
+        mapY: 0.58,
+        latitude: 18.4200,
+        longitude: -70.1000,
+      ),
     ];
+  }
+
+  static ContractAccount _supply({
+    required String id,
+    required String number,
+    required String holderName,
+    required String cedula,
+    required String address,
+    required String sector,
+    required String municipality,
+    required String province,
+    required bool commercial,
+    required String circuit,
+    String alias = '',
+    double mapX = 0.5,
+    double mapY = 0.5,
+    double latitude = 18.47,
+    double longitude = -69.90,
+  }) {
+    return ContractAccount(
+      id: id,
+      number: number,
+      holderName: holderName,
+      cedula: cedula,
+      address: address,
+      sector: sector,
+      municipality: municipality,
+      province: province,
+      clientType: commercial ? 'Comercial' : 'Residencial',
+      tariffCode: commercial ? 'BTD' : 'BTS1',
+      tariffName: commercial ? DemoTariff.commercialName : DemoTariff.residentialName,
+      circuit: circuit,
+      meter: 'MTR-$number',
+      serviceStatus: ServiceStatus.active,
+      since: DateTime(2020, 5, 14),
+      commercial: commercial,
+      mapX: mapX,
+      mapY: mapY,
+      latitude: latitude,
+      longitude: longitude,
+      alias: alias,
+    );
   }
 
   static List<ContractAccount> _linkable() {
     return [
-      ContractAccount(
-        id: 'c7',
-        number: '1009900112',
+      _supply(
+        id: 'c12',
+        number: '1045821',
         holderName: 'Carmen Díaz',
-        cedula: '001-9988776-6',
+        cedula: '001-3758602-0',
         address: 'Camino de la Finca Demo Km 2',
         sector: 'Guerra',
         municipality: 'Guerra',
-        clientType: 'Residencial',
-        tariffCode: 'BTS1',
-        tariffName: DemoTariff.residentialName,
-        circuit: 'GUE-01',
-        meter: 'MTR-990011',
-        serviceStatus: ServiceStatus.active,
-        since: DateTime(2020, 4, 18),
+        province: 'Santo Domingo',
         commercial: false,
+        circuit: 'GUE-01',
         mapX: 0.80,
         mapY: 0.58,
         latitude: 18.5550,
         longitude: -69.7000,
-        alias: '',
       ),
-      ContractAccount(
-        id: 'c8',
-        number: '1003300221',
+      _supply(
+        id: 'c13',
+        number: '2267410',
         holderName: 'Ana Pérez',
-        cedula: '001-2223334-5',
+        cedula: '001-4602917-8',
         address: 'Residencial Ejemplo, Apartamento 2A',
         sector: 'Boca Chica',
         municipality: 'Boca Chica',
-        clientType: 'Residencial',
-        tariffCode: 'BTS1',
-        tariffName: DemoTariff.residentialName,
-        circuit: 'BCH-04',
-        meter: 'MTR-330022',
-        serviceStatus: ServiceStatus.active,
-        since: DateTime(2023, 1, 7),
+        province: 'Santo Domingo',
         commercial: false,
+        circuit: 'BCH-04',
         mapX: 0.86,
         mapY: 0.50,
         latitude: 18.4530,
         longitude: -69.6060,
-        alias: '',
+      ),
+      _supply(
+        id: 'c14',
+        number: '3389056',
+        holderName: 'Luis Herrera',
+        cedula: '402-2693840-1',
+        address: 'Calle del Comercio Demo No. 16',
+        sector: 'Los Jardines',
+        municipality: 'Santiago',
+        province: 'Santiago',
+        commercial: true,
+        circuit: 'STI-06',
+        mapX: 0.22,
+        mapY: 0.18,
+        latitude: 19.4510,
+        longitude: -70.6970,
+      ),
+      _supply(
+        id: 'c15',
+        number: '4501729',
+        holderName: 'Rosa Jiménez',
+        cedula: '001-5739405-7',
+        address: 'Calle del Mercado Demo No. 4',
+        sector: 'Centro',
+        municipality: 'Baní',
+        province: 'Peravia',
+        commercial: false,
+        circuit: 'BAN-02',
+        mapX: 0.26,
+        mapY: 0.64,
+        latitude: 18.2790,
+        longitude: -70.3310,
+      ),
+      _supply(
+        id: 'c16',
+        number: '5612843',
+        holderName: 'Pedro Castillo',
+        cedula: '001-6840516-5',
+        address: 'Avenida Industrial Demo No. 3',
+        sector: 'Haina',
+        municipality: 'San Cristóbal',
+        province: 'San Cristóbal',
+        commercial: true,
+        circuit: 'HAI-03',
+        mapX: 0.30,
+        mapY: 0.52,
+        latitude: 18.4160,
+        longitude: -70.0330,
+      ),
+      _supply(
+        id: 'c17',
+        number: '6723958',
+        holderName: 'Elena Vargas',
+        cedula: '001-7951628-1',
+        address: 'Residencial Costa Demo, Villa 12',
+        sector: 'Verón',
+        municipality: 'Higüey',
+        province: 'La Altagracia',
+        commercial: false,
+        circuit: 'HIG-07',
+        mapX: 0.92,
+        mapY: 0.34,
+        latitude: 18.6100,
+        longitude: -68.4280,
+      ),
+      _supply(
+        id: 'c18',
+        number: '7834067',
+        holderName: 'Miguel Santos',
+        cedula: '223-8062734-3',
+        address: 'Calle Principal Demo No. 55',
+        sector: 'Villa Mella',
+        municipality: 'Santo Domingo Norte',
+        province: 'Santo Domingo',
+        commercial: false,
+        circuit: 'SDN-04',
+        mapX: 0.60,
+        mapY: 0.22,
+        latitude: 18.5500,
+        longitude: -69.9000,
+      ),
+      _supply(
+        id: 'c19',
+        number: '8945172',
+        holderName: 'Lucía Romero',
+        cedula: '001-9173849-1',
+        address: 'Plaza Demo, Local 7',
+        sector: 'Los Mina',
+        municipality: 'Santo Domingo Este',
+        province: 'Santo Domingo',
+        commercial: true,
+        circuit: 'LMN-11',
+        mapX: 0.76,
+        mapY: 0.38,
+        latitude: 18.4800,
+        longitude: -69.8500,
+      ),
+      _supply(
+        id: 'c20',
+        number: '9056281',
+        holderName: 'Raúl Peña',
+        cedula: '402-0284951-5',
+        address: 'Calle Ejemplo No. 101',
+        sector: 'Gazcue',
+        municipality: 'Distrito Nacional',
+        province: 'Distrito Nacional',
+        commercial: false,
+        circuit: 'DNX-04',
+        mapX: 0.50,
+        mapY: 0.46,
+        latitude: 18.4700,
+        longitude: -69.9010,
+      ),
+      _supply(
+        id: 'c21',
+        number: '2467395',
+        holderName: 'Isabel Cruz',
+        cedula: '001-1305062-9',
+        address: 'Urbanización Demo del Mar No. 19',
+        sector: 'Juan Dolio',
+        municipality: 'San Pedro de Macorís',
+        province: 'San Pedro de Macorís',
+        commercial: false,
+        circuit: 'SPM-02',
+        mapX: 0.88,
+        mapY: 0.60,
+        latitude: 18.4300,
+        longitude: -69.4200,
       ),
     ];
   }
 
   static DemoSnapshot _limitPortfolio(DemoSnapshot snapshot, PortfolioPreset portfolio) {
     const ids = {
-      PortfolioPreset.mixed: {'c1', 'c2', 'c3', 'c4', 'c5', 'c6'},
+      PortfolioPreset.mixed: {'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c9', 'c10', 'c11'},
       PortfolioPreset.singleOwn: {'c1'},
       PortfolioPreset.severalOwn: {'c1', 'c2', 'c3'},
       PortfolioPreset.ownAndThird: {'c1', 'c3', 'c4', 'c5'},
@@ -330,6 +548,12 @@ class MockSeed {
     );
   }
 
+  static List<double> _generatedSeries(ContractAccount contract) {
+    final seed = contract.number.codeUnits.fold(0, (sum, unit) => sum + unit);
+    final base = contract.commercial ? 980.0 : 210.0;
+    return [for (var i = 0; i < 12; i++) base + ((seed + i * 19) % 70)];
+  }
+
   static _History _history(ContractAccount contract) {
     const series = <String, List<double>>{
       'c1': [420, 455, 398, 372, 410, 476, 530, 568, 610, 642, 588, 541],
@@ -351,8 +575,8 @@ class MockSeed {
       'c7': 1500.0,
       'c8': 3300.0,
     };
-    final values = series[contract.id]!;
-    var reading = starts[contract.id]!;
+    final values = series[contract.id] ?? _generatedSeries(contract);
+    var reading = starts[contract.id] ?? (contract.commercial ? 22000.0 : 4200.0);
     final invoices = <Invoice>[];
     final months = <ConsumptionMonth>[];
     for (var index = 0; index < 12; index++) {
@@ -369,8 +593,8 @@ class MockSeed {
       InvoiceStatus status;
       DateTime? paidAt;
       final openBill = switch (contract.id) {
-        'c2' || 'c5' => 'paid',
-        'c3' || 'c6' => 'overdue',
+        'c2' || 'c5' || 'c10' || 'c13' || 'c17' || 'c20' => 'paid',
+        'c3' || 'c6' || 'c11' || 'c16' => 'overdue',
         _ => 'pending',
       };
       if (openBill == 'overdue' && isCurrent) {

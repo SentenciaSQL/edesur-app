@@ -1,4 +1,5 @@
 import '../billing/card_rules.dart';
+import 'cedula_rules.dart';
 
 class Validators {
   static final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -38,6 +39,20 @@ class Validators {
     if (!_cedula.hasMatch(value!.trim())) {
       return 'Usa el formato 000-0000000-0.';
     }
+    return null;
+  }
+
+  static String? contractNumber(String? value) {
+    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 7) return 'El número de contrato debe contener exactamente 7 dígitos';
+    return null;
+  }
+
+  static String? holderCedula(String? value) {
+    final digits = CedulaRules.digits(value ?? '');
+    if (digits.isEmpty) return 'Ingresa la cédula del titular.';
+    if (digits.length != 11) return 'Completa la cédula con el formato 000-0000000-0.';
+    if (!CedulaRules.hasValidCheckDigit(digits)) return 'El dígito verificador de la cédula no es válido.';
     return null;
   }
 

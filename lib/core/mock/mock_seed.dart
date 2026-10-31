@@ -5,14 +5,26 @@ import '../utils/formatters.dart';
 import 'demo_clock.dart';
 
 class MockSeed {
-  static DemoSnapshot build(DemoScenario scenario) {
+  static DemoSnapshot build(DemoScenario scenario, {PortfolioPreset portfolio = PortfolioPreset.mixed}) {
     final base = _base();
-    return switch (scenario) {
+    final shaped = switch (scenario) {
       DemoScenario.normal => base,
       DemoScenario.interruption => _interruption(base),
       DemoScenario.overdue => _overdue(base),
       DemoScenario.outageInProgress => _outageInProgress(base),
     };
+    return _limitPortfolio(shaped, portfolio);
+  }
+
+  static SupplyBundle? lookupSupply(String number) {
+    final normalized = number.trim();
+    for (final contract in _linkable()) {
+      if (contract.number == normalized) {
+        final history = _history(contract);
+        return SupplyBundle(contract, history.invoices, history.months);
+      }
+    }
+    return null;
   }
 
   static DemoSnapshot _base() {
@@ -57,6 +69,8 @@ class MockSeed {
       announcements: _announcements(),
       mapIncidents: _incidents(),
       receipts: const [],
+      transactions: const [],
+      cards: _cards(),
       messages: messages,
       prefs: const NotificationPrefs(
         invoiceAlerts: true,
@@ -72,8 +86,36 @@ class MockSeed {
       reportSequence: 1402,
       requestSequence: 510,
       receiptSequence: 40,
+      transactionSequence: 80,
+      cardSequence: 3,
+      portfolio: PortfolioPreset.mixed,
       lastUpdated: DemoClock.now,
     );
+  }
+
+  static List<SavedCard> _cards() {
+    return const [
+      SavedCard(
+        id: 'card-1',
+        brand: CardBrand.visa,
+        funding: CardFunding.credit,
+        last4: '1111',
+        holderName: 'ANDRES FRIAS',
+        expiryMonth: 12,
+        expiryYear: 2028,
+        isDefault: true,
+      ),
+      SavedCard(
+        id: 'card-2',
+        brand: CardBrand.mastercard,
+        funding: CardFunding.debit,
+        last4: '4444',
+        holderName: 'ANDRES FRIAS',
+        expiryMonth: 8,
+        expiryYear: 2027,
+        isDefault: false,
+      ),
+    ];
   }
 
   static List<ContractAccount> _contracts() {
@@ -98,6 +140,7 @@ class MockSeed {
         mapY: 0.42,
         latitude: 18.4891,
         longitude: -69.8570,
+        alias: 'Casa principal',
       ),
       ContractAccount(
         id: 'c2',
@@ -119,6 +162,7 @@ class MockSeed {
         mapY: 0.30,
         latitude: 18.5160,
         longitude: -70.0040,
+        alias: 'Apartamento',
       ),
       ContractAccount(
         id: 'c3',
@@ -140,8 +184,150 @@ class MockSeed {
         mapY: 0.55,
         latitude: 18.4160,
         longitude: -70.1090,
+        alias: 'Local comercial',
+      ),
+      ContractAccount(
+        id: 'c4',
+        number: '1004411223',
+        holderName: 'Rosa Frías',
+        cedula: '001-1234567-8',
+        address: 'Calle Familiar Demo No. 15, Urbanización Demostración',
+        sector: 'Los Mina',
+        municipality: 'Santo Domingo Este',
+        clientType: 'Residencial',
+        tariffCode: 'BTS1',
+        tariffName: DemoTariff.residentialName,
+        circuit: 'LMN-02',
+        meter: 'MTR-441122',
+        serviceStatus: ServiceStatus.active,
+        since: DateTime(2014, 6, 2),
+        commercial: false,
+        mapX: 0.74,
+        mapY: 0.36,
+        latitude: 18.4750,
+        longitude: -69.8300,
+        alias: 'Casa de mamá',
+      ),
+      ContractAccount(
+        id: 'c5',
+        number: '1007788990',
+        holderName: 'Luis Peña',
+        cedula: '402-0001111-2',
+        address: 'Apartamento Demo 3B, Edificio Ejemplo',
+        sector: 'Gazcue',
+        municipality: 'Distrito Nacional',
+        clientType: 'Residencial',
+        tariffCode: 'BTS1',
+        tariffName: DemoTariff.residentialName,
+        circuit: 'DNX-11',
+        meter: 'MTR-778899',
+        serviceStatus: ServiceStatus.active,
+        since: DateTime(2022, 2, 11),
+        commercial: false,
+        mapX: 0.52,
+        mapY: 0.48,
+        latitude: 18.4700,
+        longitude: -69.9010,
+        alias: 'Inquilino',
+      ),
+      ContractAccount(
+        id: 'c6',
+        number: '1006655443',
+        holderName: 'Pedro Gómez',
+        cedula: '001-5554443-3',
+        address: 'Calle del Mercado Demo No. 4',
+        sector: 'Baní',
+        municipality: 'Baní',
+        clientType: 'Comercial',
+        tariffCode: 'BTD',
+        tariffName: DemoTariff.commercialName,
+        circuit: 'BAN-05',
+        meter: 'MTR-665544',
+        serviceStatus: ServiceStatus.active,
+        since: DateTime(2018, 11, 9),
+        commercial: true,
+        mapX: 0.28,
+        mapY: 0.62,
+        latitude: 18.2790,
+        longitude: -70.3310,
+        alias: 'Colmado del primo',
       ),
     ];
+  }
+
+  static List<ContractAccount> _linkable() {
+    return [
+      ContractAccount(
+        id: 'c7',
+        number: '1009900112',
+        holderName: 'Carmen Díaz',
+        cedula: '001-9988776-6',
+        address: 'Camino de la Finca Demo Km 2',
+        sector: 'Guerra',
+        municipality: 'Guerra',
+        clientType: 'Residencial',
+        tariffCode: 'BTS1',
+        tariffName: DemoTariff.residentialName,
+        circuit: 'GUE-01',
+        meter: 'MTR-990011',
+        serviceStatus: ServiceStatus.active,
+        since: DateTime(2020, 4, 18),
+        commercial: false,
+        mapX: 0.80,
+        mapY: 0.58,
+        latitude: 18.5550,
+        longitude: -69.7000,
+        alias: '',
+      ),
+      ContractAccount(
+        id: 'c8',
+        number: '1003300221',
+        holderName: 'Ana Pérez',
+        cedula: '001-2223334-5',
+        address: 'Residencial Ejemplo, Apartamento 2A',
+        sector: 'Boca Chica',
+        municipality: 'Boca Chica',
+        clientType: 'Residencial',
+        tariffCode: 'BTS1',
+        tariffName: DemoTariff.residentialName,
+        circuit: 'BCH-04',
+        meter: 'MTR-330022',
+        serviceStatus: ServiceStatus.active,
+        since: DateTime(2023, 1, 7),
+        commercial: false,
+        mapX: 0.86,
+        mapY: 0.50,
+        latitude: 18.4530,
+        longitude: -69.6060,
+        alias: '',
+      ),
+    ];
+  }
+
+  static DemoSnapshot _limitPortfolio(DemoSnapshot snapshot, PortfolioPreset portfolio) {
+    const ids = {
+      PortfolioPreset.mixed: {'c1', 'c2', 'c3', 'c4', 'c5', 'c6'},
+      PortfolioPreset.singleOwn: {'c1'},
+      PortfolioPreset.severalOwn: {'c1', 'c2', 'c3'},
+      PortfolioPreset.ownAndThird: {'c1', 'c3', 'c4', 'c5'},
+      PortfolioPreset.thirdOnly: {'c4', 'c5', 'c6'},
+    };
+    final allowed = ids[portfolio]!;
+    final contracts = snapshot.contracts.where((contract) => allowed.contains(contract.id)).toList();
+    final active = allowed.contains(snapshot.activeContractId)
+        ? snapshot.activeContractId
+        : (contracts.isEmpty ? '' : contracts.first.id);
+    return snapshot.copyWith(
+      contracts: contracts,
+      activeContractId: active,
+      invoices: snapshot.invoices.where((invoice) => allowed.contains(invoice.contractId)).toList(),
+      consumption: snapshot.consumption.where((month) => allowed.contains(month.contractId)).toList(),
+      outages: snapshot.outages.where((report) => allowed.contains(report.contractId)).toList(),
+      requests: snapshot.requests.where((request) => allowed.contains(request.contractId)).toList(),
+      portfolio: portfolio,
+      transactions: const [],
+      receipts: const [],
+    );
   }
 
   static _History _history(ContractAccount contract) {
@@ -149,8 +335,22 @@ class MockSeed {
       'c1': [420, 455, 398, 372, 410, 476, 530, 568, 610, 642, 588, 541],
       'c2': [260, 280, 250, 240, 255, 300, 340, 360, 390, 410, 370, 340],
       'c3': [2000, 2100, 2050, 1980, 2140, 2300, 2420, 2510, 2480, 2390, 2280, 2210],
+      'c4': [180, 190, 175, 168, 185, 210, 230, 240, 255, 248, 220, 205],
+      'c5': [140, 150, 130, 128, 135, 160, 175, 180, 190, 185, 170, 160],
+      'c6': [900, 940, 910, 880, 960, 1020, 1100, 1080, 1040, 990, 970, 1010],
+      'c7': [300, 320, 290, 280, 310, 340, 360, 380, 400, 390, 360, 330],
+      'c8': [200, 210, 190, 185, 200, 220, 240, 250, 260, 255, 230, 215],
     };
-    const starts = {'c1': 14820.0, 'c2': 8020.0, 'c3': 54000.0};
+    const starts = {
+      'c1': 14820.0,
+      'c2': 8020.0,
+      'c3': 54000.0,
+      'c4': 4100.0,
+      'c5': 9900.0,
+      'c6': 22000.0,
+      'c7': 1500.0,
+      'c8': 3300.0,
+    };
     final values = series[contract.id]!;
     var reading = starts[contract.id]!;
     final invoices = <Invoice>[];
@@ -168,10 +368,15 @@ class MockSeed {
       var due = issue.add(const Duration(days: 18));
       InvoiceStatus status;
       DateTime? paidAt;
-      if (contract.id == 'c3' && isCurrent) {
-        due = DateTime(2026, 10, 15);
+      final openBill = switch (contract.id) {
+        'c2' || 'c5' => 'paid',
+        'c3' || 'c6' => 'overdue',
+        _ => 'pending',
+      };
+      if (openBill == 'overdue' && isCurrent) {
+        due = DateTime(2026, 10, contract.id == 'c6' ? 10 : 15);
         status = InvoiceStatus.overdue;
-      } else if (contract.id == 'c2' && isCurrent) {
+      } else if (openBill == 'paid' && isCurrent) {
         status = InvoiceStatus.paid;
         paidAt = DateTime(2026, 10, 31, 8, 10);
       } else if (isCurrent) {
@@ -838,6 +1043,13 @@ class MockSeed {
 
 class _History {
   const _History(this.invoices, this.months);
+  final List<Invoice> invoices;
+  final List<ConsumptionMonth> months;
+}
+
+class SupplyBundle {
+  const SupplyBundle(this.contract, this.invoices, this.months);
+  final ContractAccount contract;
   final List<Invoice> invoices;
   final List<ConsumptionMonth> months;
 }

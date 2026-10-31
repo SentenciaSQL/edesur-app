@@ -129,7 +129,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     final snapshot = ref.read(appControllerProvider).value;
     for (final field in definition.fields) {
       final controller = TextEditingController();
-      if (snapshot != null && field.key == 'contrato') controller.text = snapshot.activeContract.number;
+      if (snapshot != null && field.key == 'contrato') controller.text = snapshot.activeContractOrNull?.number ?? '';
       if (snapshot != null && field.key == 'nombre') controller.text = snapshot.user.name;
       if (snapshot != null && field.key == 'cedula') controller.text = snapshot.user.cedula;
       if (snapshot != null && field.key == 'telefono') controller.text = snapshot.user.phone;

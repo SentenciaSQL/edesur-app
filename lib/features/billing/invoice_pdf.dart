@@ -75,8 +75,44 @@ class InvoicePdf {
             pw.Text('Fecha: ${formatDateTime(receipt.paidAt)}'),
             pw.SizedBox(height: 12),
             pw.Text('Monto: ${formatMoney(receipt.amount)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            if (receipt.cardLast4 != null) pw.Text('Tarjeta: ${cardBrandLabel(receipt.cardBrand!)} •••• ${receipt.cardLast4}'),
           ],
         ),
+      ),
+    );
+    return doc.save();
+  }
+
+  static Future<List<int>> transaction(PaymentTransaction item) async {
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) => [
+          pw.Text('COMPROBANTE CONSOLIDADO', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF083367))),
+          pw.SizedBox(height: 8),
+          pw.Text('Documento ficticio. Una sola operación simulada, sin cargo real.'),
+          pw.SizedBox(height: 12),
+          pw.Text('Transacción: ${item.number}'),
+          pw.Text('Fecha: ${formatDateTime(item.paidAt)}'),
+          pw.Text('Estado: ${paymentStatusLabel(item.status)}'),
+          pw.Text('Método: ${paymentMethodLabel(item.method)}'),
+          if (item.cardLast4 != null) pw.Text('Tarjeta: ${cardBrandLabel(item.cardBrand!)} •••• ${item.cardLast4}'),
+          pw.SizedBox(height: 12),
+          pw.TableHelper.fromTextArray(
+            headers: const ['Contrato', 'Titular', 'Factura', 'Importe'],
+            data: [
+              for (final line in item.lines)
+                [
+                  line.alias.isEmpty ? line.contractNumber : '${line.alias} (${line.contractNumber})',
+                  line.holderName,
+                  line.invoiceNumber,
+                  formatMoney(line.amount),
+                ],
+              ['Total', '', '', formatMoney(item.total)],
+            ],
+          ),
+        ],
       ),
     );
     return doc.save();

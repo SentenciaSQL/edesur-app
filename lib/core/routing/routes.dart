@@ -18,6 +18,11 @@ class Routes {
   static const offices = '/oficinas';
   static const personal = '/cuenta/datos';
   static const contracts = '/cuenta/contratos';
+  static const addContract = '/cuenta/contratos/agregar';
+  static const paymentMethods = '/cuenta/metodos-pago';
+  static const addCard = '/cuenta/metodos-pago/agregar';
+  static const paymentHistory = '/cuenta/pagos';
+  static const multiPay = '/pagar-varios';
   static const security = '/cuenta/seguridad';
   static const preferences = '/cuenta/preferencias';
   static const faq = '/cuenta/preguntas';
@@ -32,4 +37,6 @@ class Routes {
   static String requestForm(String type) => '/tramite/$type';
   static String notification(String id) => '/notificaciones/$id';
   static String office(String id) => '/oficinas/$id';
+  static String contract(String id) => '/contratos/$id';
+  static String transaction(String id) => '/transaccion/$id';
 }

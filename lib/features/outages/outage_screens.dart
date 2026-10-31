@@ -104,7 +104,7 @@ class _ReportOutageScreenState extends ConsumerState<ReportOutageScreen> {
 
   void _prefill() {
     if (_ready) return;
-    final contract = ref.read(appControllerProvider).value?.activeContract;
+    final contract = ref.read(appControllerProvider).value?.activeContractOrNull;
     if (contract == null) return;
     _address.text = contract.address;
     _sector.text = contract.sector;
@@ -131,7 +131,11 @@ class _ReportOutageScreenState extends ConsumerState<ReportOutageScreen> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    final contract = ref.read(appControllerProvider).requireValue.activeContract;
+    final contract = ref.read(appControllerProvider).requireValue.activeContractOrNull;
+    if (contract == null) {
+      showAppMessage(context, 'Agrega un contrato antes de reportar una avería.', error: true);
+      return;
+    }
     setState(() => _loading = true);
     await runDemoAction(context, () async {
       final report = await ref.read(appControllerProvider.notifier).submitOutage(

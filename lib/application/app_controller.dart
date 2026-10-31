@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/billing/card_rules.dart';
 import '../core/mock/demo_clock.dart';
 import '../core/network/api_client.dart';
 import '../core/utils/demo_exception.dart';
@@ -19,7 +20,8 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
   late MockNotificationRepository _notifications;
   late MockAssistantRepository _assistant;
   late MockDemoRepository _demo;
-  late PayInvoiceUseCase _pay;
+  late PayInvoicesUseCase _pay;
+  bool _paying = false;
 
   @override
   Future<DemoSnapshot> build() async {
@@ -32,7 +34,7 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
     _notifications = MockNotificationRepository(_db);
     _assistant = MockAssistantRepository(_db);
     _demo = MockDemoRepository(_db, _api);
-    _pay = PayInvoiceUseCase(_billing);
+    _pay = PayInvoicesUseCase(_billing);
     final snapshot = await _db.load();
     _api.attachSession(snapshot.authenticated ? 'demo-session' : null);
     return snapshot;
@@ -162,22 +164,123 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
     await _commitFromDb();
   }
 
-  Future<PaymentReceipt> payInvoice({
-    required String invoiceId,
+  Future<void> updateAlias({required String contractId, required String alias}) async {
+    await _account.updateAlias(contractId: contractId, alias: alias);
+    await _commitFromDb();
+  }
+
+  ContractLookup lookupContract({
+    required String number,
+    required String cedula,
+    required String holderName,
+  }) {
+    return const LinkContractUseCase().lookup(
+      snapshot: _current,
+      number: number,
+      cedula: cedula,
+      holderName: holderName,
+    );
+  }
+
+  Future<void> linkContract({
+    required ContractAccount contract,
+    required List<Invoice> invoices,
+    required List<ConsumptionMonth> months,
+    required String alias,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    await _account.linkContract(contract: contract, invoices: invoices, months: months, alias: alias);
+    await _commitFromDb();
+  }
+
+  Future<void> unlinkContract(String contractId) async {
+    const UnlinkContractUseCase().check(_current, contractId);
+    await _account.unlinkContract(contractId);
+    await _commitFromDb();
+  }
+
+  Future<CardDraft> prepareCard({
+    required String number,
+    required String holderName,
+    required String expiry,
+    required String cvv,
+    required CardFunding funding,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return const AddCardUseCase().prepare(
+      number: number,
+      holderName: holderName,
+      expiry: expiry,
+      cvv: cvv,
+      funding: funding,
+    );
+  }
+
+  Future<void> saveCard({
+    required CardDraft draft,
+    required bool makeDefault,
+  }) async {
+    final id = 'card-${_current.cardSequence}';
+    await _account.addCard(SavedCard(
+      id: id,
+      brand: draft.brand,
+      funding: draft.funding,
+      last4: draft.last4,
+      holderName: draft.holderName,
+      expiryMonth: draft.expiryMonth,
+      expiryYear: draft.expiryYear,
+      isDefault: makeDefault || _current.cards.isEmpty,
+    ));
+    await _commitFromDb();
+  }
+
+  Future<void> removeCard({required String cardId, String? replacementDefaultId}) async {
+    await _account.removeCard(cardId: cardId, replacementDefaultId: replacementDefaultId);
+    await _commitFromDb();
+  }
+
+  Future<void> setDefaultCard(String cardId) async {
+    await _account.setDefaultCard(cardId);
+    await _commitFromDb();
+  }
+
+  Future<PaymentTransaction> payInvoices({
+    required List<String> invoiceIds,
     required PaymentMethod method,
     String? cardNumber,
+    String? expiry,
+    String? holderName,
+    String? savedCardId,
     bool forceFailure = false,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
-    final receipt = await _pay.execute(
-      snapshot: _current,
-      invoiceId: invoiceId,
-      method: method,
-      cardNumber: cardNumber,
-      forceFailure: forceFailure,
-    );
-    await _commitFromDb();
-    return receipt;
+    if (_paying) {
+      throw DemoException('Ya hay un pago simulado en proceso.');
+    }
+    _paying = true;
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      SavedCard? saved;
+      if (savedCardId != null) {
+        for (final card in _current.cards) {
+          if (card.id == savedCardId) saved = card;
+        }
+        if (saved == null) throw DemoException('No encontramos la tarjeta seleccionada.');
+      }
+      final transaction = await _pay.execute(
+        snapshot: _current,
+        invoiceIds: invoiceIds,
+        method: method,
+        forceFailure: forceFailure,
+        cardNumber: cardNumber,
+        expiry: expiry,
+        holderName: holderName,
+        savedCard: saved,
+      );
+      await _commitFromDb();
+      return transaction;
+    } finally {
+      _paying = false;
+    }
   }
 
   Future<OutageReport> submitOutage({
@@ -287,6 +390,11 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
 
   Future<void> applyScenario(DemoScenario scenario) async {
     await _demo.applyScenario(scenario, keepAccount: true);
+    await _commitFromDb();
+  }
+
+  Future<void> applyPortfolio(PortfolioPreset portfolio) async {
+    await _demo.applyPortfolio(portfolio);
     await _commitFromDb();
   }
 

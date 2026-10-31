@@ -20,7 +20,7 @@ class AccountScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SnapshotBody(
       builder: (context, snapshot) {
-        final contract = snapshot.activeContract;
+        final contract = snapshot.activeContractOrNull;
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
@@ -39,7 +39,7 @@ class AccountScreen extends ConsumerWidget {
                       children: [
                         Text(snapshot.user.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.navyDeep)),
                         Text(snapshot.user.email, style: const TextStyle(color: AppColors.muted)),
-                        Text('Contrato ${contract.number}', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
+                        Text(contract == null ? 'Sin contrato vinculado' : 'Contrato ${contract.number}', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -50,6 +50,8 @@ class AccountScreen extends ConsumerWidget {
             _tile(context, Icons.swap_horiz, 'Cambiar contrato', () => showContractSwitcher(context, ref)),
             _tile(context, Icons.badge_outlined, 'Datos personales', () => context.push(Routes.personal)),
             _tile(context, Icons.home_work_outlined, 'Contratos', () => context.push(Routes.contracts)),
+            _tile(context, Icons.credit_card_outlined, 'Métodos de pago', () => context.push(Routes.paymentMethods)),
+            _tile(context, Icons.receipt_outlined, 'Historial de pagos', () => context.push(Routes.paymentHistory)),
             _tile(context, Icons.notifications_outlined, 'Preferencias de notificación', () => context.push(Routes.preferences)),
             _tile(context, Icons.lock_outline, 'Seguridad', () => context.push(Routes.security)),
             _tile(context, Icons.help_outline, 'Preguntas frecuentes', () => context.push(Routes.faq)),
@@ -127,7 +129,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
     return SnapshotBody(
       builder: (context, snapshot) {
         _init(snapshot.user);
-        final contract = snapshot.activeContract;
+        final contract = snapshot.activeContractOrNull;
         return FeatureScaffold(
           title: 'Datos personales',
           body: Form(
@@ -151,9 +153,11 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                     children: [
                       const Text('Suministro activo', style: TextStyle(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 6),
-                      Text(contract.address),
-                      Text(contract.sector),
-                      Text('Contrato ${contract.number} · ${contract.clientType}'),
+                      Text(contract == null ? 'No hay un contrato vinculado.' : contract.address),
+                      if (contract != null) ...[
+                        Text(contract.sector),
+                        Text('Contrato ${contract.number} · ${contract.clientType}'),
+                      ],
                     ],
                   ),
                 ),
@@ -179,117 +183,6 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   }
 }
 
-class ContractsScreen extends ConsumerStatefulWidget {
-  const ContractsScreen({super.key});
-
-  @override
-  ConsumerState<ContractsScreen> createState() => _ContractsScreenState();
-}
-
-class _ContractsScreenState extends ConsumerState<ContractsScreen> {
-  final _number = TextEditingController();
-
-  @override
-  void dispose() {
-    _number.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SnapshotBody(
-      builder: (context, snapshot) {
-        return FeatureScaffold(
-          title: 'Contratos',
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              for (final contract in snapshot.contracts) ...[
-                AppCard(
-                  onTap: () => ref.read(appControllerProvider.notifier).selectContract(contract.id),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Text(contract.number, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
-                          if (contract.id == snapshot.activeContractId) const StatusPill(label: 'En uso', color: AppColors.orangeDark),
-                        ],
-                      ),
-                      Text(contract.address),
-                      Text('${contract.sector} · ${contract.clientType} · ${contract.tariffCode}'),
-                      Text('Circuito ${contract.circuit} · Medidor ${contract.meter}'),
-                      Text('Desde ${formatDate(contract.since)}', style: const TextStyle(color: AppColors.muted)),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => _editAddress(context, contract),
-                          child: const Text('Editar dirección'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              const Text('Agregar un contrato de la demostración', style: TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              TextField(controller: _number, decoration: const InputDecoration(labelText: 'Número de contrato')),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () {
-                  final match = snapshot.contracts.where((contract) => contract.number == _number.text.trim());
-                  if (match.isEmpty) {
-                    showAppMessage(context, 'No encontramos ese contrato en los datos de demostración.', error: true);
-                    return;
-                  }
-                  ref.read(appControllerProvider.notifier).selectContract(match.first.id);
-                  showAppMessage(context, 'Contrato ${match.first.number} seleccionado.');
-                },
-                child: const Text('Buscar y seleccionar'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _editAddress(BuildContext context, ContractAccount contract) async {
-    final address = TextEditingController(text: contract.address);
-    final sector = TextEditingController(text: contract.sector);
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Dirección del suministro'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: address, decoration: const InputDecoration(labelText: 'Dirección')),
-            TextField(controller: sector, decoration: const InputDecoration(labelText: 'Sector')),
-            const SizedBox(height: 8),
-            const Text('El cambio es simulado y solo se ve en este dispositivo.'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
-        ],
-      ),
-    );
-    if (saved == true && context.mounted) {
-      await ref.read(appControllerProvider.notifier).updateContractAddress(
-            contractId: contract.id,
-            address: address.text.trim(),
-            sector: sector.text.trim(),
-          );
-      if (context.mounted) showAppMessage(context, 'Dirección de demostración actualizada.');
-    }
-    address.dispose();
-    sector.dispose();
-  }
-}
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});

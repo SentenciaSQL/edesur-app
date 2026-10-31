@@ -33,6 +33,34 @@ class DemoModeScreen extends ConsumerWidget {
             Text('Escenario actual: ${scenarioLabel(snapshot.scenario)}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy)),
           ],
           const SizedBox(height: 16),
+          const Text('Cartera de contratos', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+          const SizedBox(height: 6),
+          const Text('Cambia cuántos contratos propios y de terceros tiene la cuenta. Se restablecen facturas y pagos. Las tarjetas guardadas se conservan.'),
+          const SizedBox(height: 10),
+          for (final preset in PortfolioPreset.values) ...[
+            AppCard(
+              color: snapshot?.portfolio == preset ? AppColors.orangeSoft : AppColors.white,
+              onTap: () async {
+                await ref.read(appControllerProvider.notifier).applyPortfolio(preset);
+                if (context.mounted) {
+                  showAppMessage(context, 'Cartera cargada: ${portfolioLabel(preset)}.');
+                  context.go(Routes.contracts);
+                }
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(portfolioLabel(preset), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+                  const SizedBox(height: 4),
+                  Text(portfolioDescription(preset)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          const SizedBox(height: 8),
+          const Text('Estado del servicio', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+          const SizedBox(height: 10),
           for (final scenario in DemoScenario.values) ...[
             AppCard(
               color: snapshot?.scenario == scenario ? AppColors.orangeSoft : AppColors.white,

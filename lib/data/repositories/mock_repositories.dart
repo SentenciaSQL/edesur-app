@@ -10,6 +10,21 @@ import '../../domain/repositories/repositories.dart';
 import '../../shared/labels.dart';
 import '../datasources/mock_database.dart';
 
+String _normalizeAlias(String value) => value.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+String _cleanAlias(String value) {
+  final cleaned = _normalizeAlias(value);
+  if (cleaned.isEmpty) throw DemoException(AppConstants.emptyAliasMessage);
+  if (cleaned.length > AppConstants.aliasMaxLength) throw DemoException(AppConstants.longAliasMessage);
+  return cleaned;
+}
+
+String _optionalAlias(String value) {
+  final cleaned = _normalizeAlias(value);
+  if (cleaned.length > AppConstants.aliasMaxLength) throw DemoException(AppConstants.longAliasMessage);
+  return cleaned;
+}
+
 class MockAccountRepository implements AccountRepository {
   MockAccountRepository(this._db, this._api);
   final MockDatabase _db;
@@ -39,25 +54,13 @@ class MockAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<DemoSnapshot> updateContractAddress({
-    required String contractId,
-    required String address,
-    required String sector,
-  }) {
-    final contracts = [
-      for (final contract in _db.current.contracts)
-        if (contract.id == contractId) contract.copyWith(address: address, sector: sector) else contract,
-    ];
-    return _db.commit(_db.current.copyWith(contracts: contracts));
-  }
-
-  @override
   Future<DemoSnapshot> updateAlias({required String contractId, required String alias}) {
     final exists = _db.current.contracts.any((contract) => contract.id == contractId);
     if (!exists) throw DemoException('No encontramos ese contrato.');
+    final cleaned = _cleanAlias(alias);
     final contracts = [
       for (final contract in _db.current.contracts)
-        if (contract.id == contractId) contract.copyWith(alias: alias.trim()) else contract,
+        if (contract.id == contractId) contract.copyWith(alias: cleaned) else contract,
     ];
     return _db.commit(_db.current.copyWith(contracts: contracts));
   }
@@ -73,7 +76,7 @@ class MockAccountRepository implements AccountRepository {
     if (current.contracts.any((item) => item.id == contract.id || item.number == contract.number)) {
       throw DemoException('Este contrato ya está vinculado a tu cuenta.');
     }
-    final linked = contract.copyWith(alias: alias.trim());
+    final linked = contract.copyWith(alias: _optionalAlias(alias));
     return _db.commit(current.copyWith(
       contracts: [...current.contracts, linked],
       invoices: [...current.invoices, ...invoices],

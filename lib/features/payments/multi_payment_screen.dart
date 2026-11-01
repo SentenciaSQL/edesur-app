@@ -78,12 +78,24 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     if (_processing) {
-      return const Scaffold(
-        body: Center(child: Padding(padding: EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 18),
-          Text('Procesando un solo pago para varios contratos', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-        ]))),
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 18),
+                Text(
+                  _selected.length > 1 ? 'Procesando un solo pago para varios contratos' : 'Procesando el pago del contrato',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     final result = _result;
@@ -103,7 +115,10 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
                 const SizedBox(height: 8),
                 Text('${result.number} · ${formatMoney(result.total)}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy)),
                 const SizedBox(height: 20),
-                FilledButton(onPressed: () => context.push(Routes.transaction(result.id)), child: const Text('Ver comprobante consolidado')),
+                FilledButton(
+                  onPressed: () => context.push(Routes.transaction(result.id)),
+                  child: Text(result.lines.length > 1 ? 'Ver comprobante consolidado' : 'Ver comprobante'),
+                ),
                 const SizedBox(height: 8),
                 if (!result.approved)
                   TextButton(onPressed: () => setState(() => _result = null), child: const Text('Intentar de nuevo')),
@@ -120,16 +135,16 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
         final chosen = rows.where((row) => row.invoice != null && _selected.contains(row.invoice!.id)).toList();
         final total = chosen.fold<double>(0, (sum, row) => sum + row.balance);
         return FeatureScaffold(
-          title: _step == 0 ? 'Pagar contratos' : _step == 1 ? 'Resumen' : 'Tarjeta',
+          title: _step == 0 ? 'Pago en Línea' : _step == 1 ? 'Resumen' : 'Tarjeta',
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               if (_step == 0) ...[
-                const Text('Elige uno o varios contratos con balance. Los que están al día no entran en el total.'),
+                const Text('Consulta los contratos vinculados, sus facturas y el balance. Elige uno, varios o todos los que tienen balance pendiente.'),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: OutlinedButton(onPressed: () => _selectOpen(snapshot), child: const Text('Con balance'))),
+                    Expanded(child: OutlinedButton(onPressed: () => _selectOpen(snapshot), child: const Text('Seleccionar con balance'))),
                     const SizedBox(width: 8),
                     Expanded(child: OutlinedButton(onPressed: () => setState(_selected.clear), child: const Text('Quitar todos'))),
                   ],
@@ -261,7 +276,8 @@ class _ContractPayTile extends StatelessWidget {
                 Text(row.contract.address, style: const TextStyle(color: AppColors.muted)),
                 const SizedBox(height: 4),
                 Text(open ? formatMoney(row.balance) : 'Sin deuda', style: TextStyle(fontWeight: FontWeight.w700, color: open ? AppColors.navy : AppColors.green)),
-                if (row.invoice != null) Text(invoiceStatusLabel(row.invoice!.status), style: const TextStyle(color: AppColors.muted)),
+                if (row.invoice != null)
+                  Text('${row.invoice!.number} · ${invoiceStatusLabel(row.invoice!.status)}', style: const TextStyle(color: AppColors.muted)),
               ],
             ),
           ),

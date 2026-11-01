@@ -22,7 +22,7 @@ Todas las operaciones ocurren en el dispositivo. Los contratos, facturas, tarjet
 - **Centro de notificaciones.** Avisos locales de facturas, pagos, averías y solicitudes, con preferencias de la cuenta.
 - **Centros de atención.** Directorio de oficinas ficticias, marcadas como demostración, y los teléfonos publicados en el sitio de EDESUR.
 - **Modo demostración.** Escenarios de servicio y carteras de contratos, con restauración del estado inicial.
-- **Navegación.** Barra inferior con Inicio, Facturas, Averías, Solicitudes y Mi cuenta. El icono de cuadrícula del inicio abre accesos a contratos, agregar contrato, métodos de pago, historial, solicitudes, oficinas, asistente y preguntas frecuentes.
+- **Navegación.** Barra inferior con Inicio, Facturas, Averías, Solicitudes y Mi cuenta. El icono de cuadrícula del inicio abre accesos rápidos. La primera opción, destacada en naranja, es Pago en Línea. Después siguen contratos, agregar contrato, métodos de pago, historial, solicitudes, oficinas, asistente y preguntas frecuentes.
 
 ## Métodos de pago
 
@@ -44,6 +44,7 @@ El procesamiento es simulado. No se realiza ninguna transacción bancaria real. 
 - Un usuario puede vincular varios contratos.
 - El usuario no puede eliminar un contrato en el que figura como titular. El mensaje es: «No puedes eliminar este contrato porque figuras como su titular. Para gestionar la titularidad del suministro, debes realizar el trámite correspondiente con EDESUR.»
 - Un contrato de un tercero que ya está vinculado sí se puede quitar de la cuenta.
+- El número, la cédula, el titular, la dirección y el resto de datos oficiales del suministro no se editan. El único dato personalizable es el alias, de hasta 40 caracteres, y se guarda en el dispositivo.
 - Una factura se puede pagar sola o junto con otras, en una única operación.
 - El pago múltiple usa una sola tarjeta para todas las facturas de esa transacción.
 - Una tarjeta guardada conserva marca, tipo (crédito o débito), últimos cuatro dígitos, nombre del titular y vencimiento. El número completo y el CVV no se almacenan ni se envían.

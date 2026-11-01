@@ -19,6 +19,9 @@ class AppConstants {
   static const demoPhotoAsset = 'assets/demo/foto_averia.png';
 
   static const schemaVersion = 4;
+  static const aliasMaxLength = 40;
+  static const emptyAliasMessage = 'Escribe un alias para identificar el contrato.';
+  static const longAliasMessage = 'El alias puede tener hasta 40 caracteres.';
   static const cannotUnlinkOwnContract =
       'No puedes eliminar este contrato porque figuras como su titular. Para gestionar la titularidad del suministro, debes realizar el trámite correspondiente con EDESUR.';
   static const storageKey = 'edesur_demo_snapshot_v1';

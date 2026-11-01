@@ -135,15 +135,6 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
     await _commitFromDb();
   }
 
-  Future<void> updateContractAddress({
-    required String contractId,
-    required String address,
-    required String sector,
-  }) async {
-    await _account.updateContractAddress(contractId: contractId, address: address, sector: sector);
-    await _commitFromDb();
-  }
-
   Future<void> changePassword(String current, String next) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (current != _current.password) {

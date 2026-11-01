@@ -73,6 +73,8 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(snapshot.user.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+                    if (contract.alias.trim().isNotEmpty)
+                      Text(contract.alias.trim(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy)),
                     Text('Contrato ${contract.number}', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
                     Text(contract.address, style: const TextStyle(color: AppColors.ink)),

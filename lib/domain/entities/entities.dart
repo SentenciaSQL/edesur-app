@@ -157,8 +157,6 @@ class ContractAccount {
 
   ContractAccount copyWith({
     ServiceStatus? serviceStatus,
-    String? address,
-    String? sector,
     String? alias,
   }) {
     return ContractAccount(
@@ -167,8 +165,8 @@ class ContractAccount {
       alias: alias ?? this.alias,
       holderName: holderName,
       cedula: cedula,
-      address: address ?? this.address,
-      sector: sector ?? this.sector,
+      address: address,
+      sector: sector,
       municipality: municipality,
       province: province,
       clientType: clientType,

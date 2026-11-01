@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -132,18 +133,28 @@ class ContractDetailScreen extends ConsumerWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              _AliasEditor(contract: contract),
+              const SizedBox(height: 12),
+              const Text(
+                'Datos del suministro. Esta información oficial no se puede modificar.',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              const SizedBox(height: 8),
               AppCard(
                 child: Column(
                   children: [
                     InfoLine(label: 'Contrato', value: contract.number),
-                    InfoLine(label: 'Alias', value: contract.alias.isEmpty ? 'Sin alias' : contract.alias),
                     InfoLine(label: 'Titular', value: contract.holderName),
                     InfoLine(label: 'Cédula del titular', value: contract.cedula),
                     InfoLine(label: 'Dirección', value: contract.address),
                     InfoLine(label: 'Sector', value: contract.sector),
+                    InfoLine(label: 'Municipio', value: contract.municipality),
+                    InfoLine(label: 'Provincia', value: contract.province.trim().isEmpty ? '—' : contract.province),
                     InfoLine(label: 'Tipo de cliente', value: contract.clientType),
-                    InfoLine(label: 'Estado', value: serviceStatusLabel(contract.serviceStatus)),
-                    InfoLine(label: 'Balance', value: balance <= 0 ? 'Sin deuda' : formatMoney(balance)),
+                    InfoLine(label: 'Tipo de tarifa', value: contract.tariffName),
+                    InfoLine(label: 'Circuito', value: contract.circuit),
+                    InfoLine(label: 'Estado del servicio', value: serviceStatusLabel(contract.serviceStatus)),
+                    InfoLine(label: 'Balance pendiente', value: balance <= 0 ? 'Sin deuda' : formatMoney(balance)),
                     InfoLine(label: 'Titularidad', value: owned ? 'Titular del contrato' : 'Contrato de tercero'),
                   ],
                 ),
@@ -162,10 +173,6 @@ class ContractDetailScreen extends ConsumerWidget {
                 FilledButton(onPressed: () => context.push(Routes.pay(invoice.id)), child: const Text('Pagar esta factura')),
               ],
               const SizedBox(height: 8),
-              OutlinedButton(onPressed: () => _alias(context, ref, contract!), child: const Text('Editar alias')),
-              const SizedBox(height: 8),
-              OutlinedButton(onPressed: () => _address(context, ref, contract!), child: const Text('Editar dirección')),
-              const SizedBox(height: 8),
               if (invoice != null)
                 TextButton(onPressed: () => context.push(Routes.invoice(invoice.id)), child: const Text('Ver detalle de la factura')),
               const SizedBox(height: 8),
@@ -178,58 +185,6 @@ class ContractDetailScreen extends ConsumerWidget {
         );
       },
     );
-  }
-
-  Future<void> _alias(BuildContext context, WidgetRef ref, ContractAccount contract) async {
-    final controller = TextEditingController(text: contract.alias);
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Alias del contrato'),
-        content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'Alias', hintText: 'Ej. Casa principal')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
-        ],
-      ),
-    );
-    if (saved == true && context.mounted) {
-      await ref.read(appControllerProvider.notifier).updateAlias(contractId: contract.id, alias: controller.text);
-      if (context.mounted) showAppMessage(context, 'Alias actualizado en este dispositivo.');
-    }
-    controller.dispose();
-  }
-
-  Future<void> _address(BuildContext context, WidgetRef ref, ContractAccount contract) async {
-    final address = TextEditingController(text: contract.address);
-    final sector = TextEditingController(text: contract.sector);
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Dirección del suministro'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: address, decoration: const InputDecoration(labelText: 'Dirección')),
-            TextField(controller: sector, decoration: const InputDecoration(labelText: 'Sector')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
-        ],
-      ),
-    );
-    if (saved == true && context.mounted) {
-      await ref.read(appControllerProvider.notifier).updateContractAddress(
-            contractId: contract.id,
-            address: address.text.trim(),
-            sector: sector.text.trim(),
-          );
-      if (context.mounted) showAppMessage(context, 'Dirección de demostración actualizada.');
-    }
-    address.dispose();
-    sector.dispose();
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, ContractAccount contract, bool owned) async {
@@ -260,6 +215,133 @@ class ContractDetailScreen extends ConsumerWidget {
     } on DemoException catch (error) {
       if (context.mounted) showAppMessage(context, error.message, error: true);
     }
+  }
+}
+
+class _AliasEditor extends ConsumerStatefulWidget {
+  const _AliasEditor({required this.contract});
+  final ContractAccount contract;
+
+  @override
+  ConsumerState<_AliasEditor> createState() => _AliasEditorState();
+}
+
+class _AliasEditorState extends ConsumerState<_AliasEditor> {
+  final _controller = TextEditingController();
+  bool _editing = false;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = widget.contract.alias;
+  }
+
+  @override
+  void didUpdateWidget(covariant _AliasEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing && oldWidget.contract.alias != widget.contract.alias) {
+      _controller.text = widget.contract.alias;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _start() {
+    setState(() {
+      _editing = true;
+      _error = null;
+      _controller.text = widget.contract.alias;
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _editing = false;
+      _error = null;
+      _controller.text = widget.contract.alias;
+    });
+  }
+
+  Future<void> _save() async {
+    final value = _controller.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (value.isEmpty) {
+      setState(() => _error = AppConstants.emptyAliasMessage);
+      return;
+    }
+    if (value.length > AppConstants.aliasMaxLength) {
+      setState(() => _error = AppConstants.longAliasMessage);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(appControllerProvider.notifier).updateAlias(contractId: widget.contract.id, alias: value);
+      if (!mounted) return;
+      setState(() => _editing = false);
+      showAppMessage(context, 'Alias actualizado en este dispositivo.');
+    } on DemoException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final alias = widget.contract.alias.trim();
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Alias', style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          if (!_editing) ...[
+            Text(
+              alias.isEmpty ? 'Sin alias' : alias,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navyDeep),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: _start, child: const Text('Editar alias')),
+          ] else ...[
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              maxLength: AppConstants.aliasMaxLength,
+              inputFormatters: [LengthLimitingTextInputFormatter(AppConstants.aliasMaxLength)],
+              decoration: InputDecoration(
+                labelText: 'Alias',
+                hintText: 'Ej. Mi casa, Apartamento, Local comercial',
+                errorText: _error,
+              ),
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(onPressed: _saving ? null : _cancel, child: const Text('Cancelar')),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(onPressed: _saving ? null : _save, child: const Text('Guardar cambios')),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -455,6 +537,8 @@ class _AddContractScreenState extends ConsumerState<AddContractScreen> {
                 TextFormField(
                   controller: _alias,
                   decoration: const InputDecoration(labelText: 'Alias', hintText: 'Opcional. Ej. Finca'),
+                  maxLength: AppConstants.aliasMaxLength,
+                  inputFormatters: [LengthLimitingTextInputFormatter(AppConstants.aliasMaxLength)],
                 ),
               ],
             ),

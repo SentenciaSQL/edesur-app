@@ -5,11 +5,6 @@ abstract class AccountRepository {
   Future<DemoSnapshot> updatePassword(String password);
   Future<DemoSnapshot> updatePrefs(NotificationPrefs prefs);
   Future<DemoSnapshot> selectContract(String contractId);
-  Future<DemoSnapshot> updateContractAddress({
-    required String contractId,
-    required String address,
-    required String sector,
-  });
   Future<DemoSnapshot> updateAlias({required String contractId, required String alias});
   Future<DemoSnapshot> linkContract({
     required ContractAccount contract,

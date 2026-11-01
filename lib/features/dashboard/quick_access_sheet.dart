@@ -49,6 +49,8 @@ class QuickAccessSheet extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.navyDeep),
           ),
           const SizedBox(height: 14),
+          const _PayOnlineTile(),
+          const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -62,6 +64,53 @@ class QuickAccessSheet extends StatelessWidget {
             itemBuilder: (context, index) => _QuickTile(item: _items[index]),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PayOnlineTile extends StatelessWidget {
+  const _PayOnlineTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.orange,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _open(context, Routes.multiPay),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(color: AppColors.white, shape: BoxShape.circle),
+                child: const Icon(Icons.payments_rounded, color: AppColors.orangeDark, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pago en Línea',
+                      style: TextStyle(color: AppColors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Paga uno o varios contratos con tarjeta',
+                      style: TextStyle(color: AppColors.white, fontSize: 13, height: 1.2),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.white),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -98,15 +147,7 @@ class _QuickTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          final router = GoRouter.of(context);
-          Navigator.pop(context);
-          if (item.switchTab) {
-            router.go(item.route);
-          } else {
-            router.push(item.route);
-          }
-        },
+        onTap: () => _open(context, item.route, switchTab: item.switchTab),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           child: Column(
@@ -131,5 +172,15 @@ class _QuickTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+void _open(BuildContext context, String route, {bool switchTab = false}) {
+  final router = GoRouter.of(context);
+  Navigator.pop(context);
+  if (switchTab) {
+    router.go(route);
+  } else {
+    router.push(route);
   }
 }

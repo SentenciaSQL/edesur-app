@@ -131,7 +131,7 @@ class Catalogs {
     FaqItem(
       question: '¿Cómo pago mi factura en este prototipo?',
       answer:
-          'Desde Inicio o Facturas elige Pagar ahora. Puedes simular tarjeta, transferencia o punto de pago. La tarjeta 4111 1111 1111 1111 produce un pago exitoso. La terminada en 0002 simula un rechazo. No se procesa ningún cargo real.',
+          'Desde Inicio o Facturas elige Pagar ahora. El prototipo solo simula tarjetas de crédito o débito. La terminada en 1111 aprueba el pago, la terminada en 0002 lo rechaza y la terminada en 0005 simula un error del procesador. Una tarjeta con vencimiento 01/26 queda vencida. No se procesa ningún cargo real.',
     ),
     FaqItem(
       question: '¿Qué significa que la información es simulada?',
@@ -419,7 +419,7 @@ class AssistantEngine {
     if (_has(q, ['donde pagar', 'punto de pago', 'pagar mi factura', 'como pago', 'oficina'])) {
       return AssistantReply(
         text:
-            'En el prototipo puedes simular el pago con tarjeta, transferencia o un código de punto de pago. El centro de atención publicado es ${AppConstants.publishedCallCenter}. Las oficinas del directorio son ficticias y están marcadas como demostración.',
+            'En el prototipo el pago se simula solo con tarjeta de crédito o débito. El centro de atención publicado es ${AppConstants.publishedCallCenter}. Las oficinas del directorio son ficticias y están marcadas como demostración.',
         actions: const [
           ChatAction(label: 'Pagar ahora', link: AssistantLink.pay),
           ChatAction(label: 'Ver oficinas demo', link: AssistantLink.offices),

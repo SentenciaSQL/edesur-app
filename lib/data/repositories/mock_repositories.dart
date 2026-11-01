@@ -161,6 +161,7 @@ class MockBillingRepository implements BillingRepository {
     CardBrand? cardBrand,
     String? cardLast4,
     String? cardHolder,
+    CardFunding? cardFunding,
     String? message,
   }) async {
     final snapshot = _db.current;
@@ -190,11 +191,7 @@ class MockBillingRepository implements BillingRepository {
       if (approved) {
         receiptSequence += 1;
         receiptId = 'rcp-$receiptSequence';
-        final reference = switch (method) {
-          PaymentMethod.card => 'TARJ-${cardLast4 ?? '0000'}-${receiptSequence.toString().padLeft(4, '0')}',
-          PaymentMethod.transfer => 'TRF-DEMO-$receiptSequence',
-          PaymentMethod.paymentPoint => 'PAG-DEMO-$receiptSequence',
-        };
+        final reference = 'TARJ-${cardLast4 ?? '0000'}-${receiptSequence.toString().padLeft(4, '0')}';
         receipts.add(PaymentReceipt(
           id: receiptId,
           number: 'CP-2026-${receiptSequence.toString().padLeft(5, '0')}',
@@ -209,6 +206,7 @@ class MockBillingRepository implements BillingRepository {
           transactionId: txId,
           cardBrand: cardBrand,
           cardLast4: cardLast4,
+          cardFunding: cardFunding,
         ));
         final index = invoices.indexWhere((item) => item.id == invoice.id);
         invoices[index] = invoice.copyWith(status: InvoiceStatus.paid, paidAt: now, receiptId: receiptId);
@@ -237,6 +235,7 @@ class MockBillingRepository implements BillingRepository {
       cardBrand: cardBrand,
       cardLast4: cardLast4,
       cardHolder: cardHolder,
+      cardFunding: cardFunding,
       message: message,
     );
     final notification = approved

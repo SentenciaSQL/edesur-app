@@ -263,9 +263,9 @@ class ReceiptScreen extends ConsumerWidget {
                     InfoLine(label: 'Comprobante', value: receipt.number),
                     InfoLine(label: 'Factura', value: receipt.invoiceNumber),
                     InfoLine(label: 'Contrato', value: receipt.contractNumber),
-                    InfoLine(label: 'Método', value: paymentMethodLabel(receipt.method)),
-                    if (receipt.cardLast4 != null)
-                      InfoLine(label: 'Tarjeta', value: '${cardBrandLabel(receipt.cardBrand!)} •••• ${receipt.cardLast4}'),
+                    InfoLine(label: 'Marca', value: receipt.cardBrand == null ? 'Tarjeta' : cardBrandLabel(receipt.cardBrand!)),
+                    InfoLine(label: 'Tipo', value: receipt.cardFunding == null ? 'Crédito o débito' : cardFundingLabel(receipt.cardFunding!)),
+                    InfoLine(label: 'Terminación', value: receipt.cardLast4 == null ? '—' : '•••• ${receipt.cardLast4}'),
                     InfoLine(label: 'Referencia', value: receipt.reference),
                     InfoLine(label: 'Autorización', value: receipt.authorization),
                     InfoLine(label: 'Fecha', value: formatDateTime(receipt.paidAt)),

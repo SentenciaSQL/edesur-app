@@ -29,7 +29,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final confirmed = await showConfirmSheet(
       context: context,
       title: 'Confirmar pago simulado',
-      message: 'Se aplicará ${formatMoney(invoice.total)} con ${paymentMethodLabel(submission.method)}. No saldrá dinero de ninguna cuenta.',
+      message: 'Se aplicará ${formatMoney(invoice.total)} con ${submission.summary}. No saldrá dinero de ninguna cuenta.',
       confirmLabel: 'Pagar ${formatMoney(invoice.total)}',
     );
     if (!confirmed || !mounted) return;
@@ -42,6 +42,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             expiry: submission.expiry,
             holderName: submission.holderName,
             savedCardId: submission.savedCardId,
+            cardFunding: submission.funding,
             forceFailure: submission.forceFailure,
           );
       if (mounted) setState(() => _result = transaction);
@@ -67,6 +68,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     return SnapshotBody(
       builder: (context, snapshot) {
         final invoice = snapshot.invoiceById(widget.invoiceId);
+        ContractAccount? contract;
+        if (invoice != null) {
+          for (final item in snapshot.contracts) {
+            if (item.id == invoice.contractId) contract = item;
+          }
+        }
         if (invoice == null || invoice.status == InvoiceStatus.paid) {
           return FeatureScaffold(
             title: 'Pagar',
@@ -85,9 +92,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(invoice.number, style: const TextStyle(color: AppColors.muted)),
-                    Text(formatMoney(invoice.total), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
-                    Text('Vence ${formatDate(invoice.dueDate)}'),
+                    Text(contract?.displayName ?? 'Contrato', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+                    if (contract != null) Text('${contract.number} · ${contract.holderName}'),
+                    const SizedBox(height: 8),
+                    InfoLine(label: 'Factura', value: invoice.number),
+                    InfoLine(label: 'Importe', value: formatMoney(invoice.total)),
+                    InfoLine(label: 'Vence', value: formatDate(invoice.dueDate)),
                   ],
                 ),
               ),
@@ -126,7 +136,7 @@ class _ProcessingView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Validando el método y aplicando la operación en este dispositivo. No hay conexión con un banco.',
+                'Validando la tarjeta y aplicando la operación en este dispositivo. No hay conexión con un banco.',
                 textAlign: TextAlign.center,
               ),
             ],

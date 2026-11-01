@@ -28,10 +28,17 @@ Color invoiceStatusColor(InvoiceStatus status) => switch (status) {
     };
 
 String paymentMethodLabel(PaymentMethod method) => switch (method) {
-      PaymentMethod.card => 'Tarjeta de crédito o débito',
-      PaymentMethod.transfer => 'Transferencia simulada',
-      PaymentMethod.paymentPoint => 'Punto de pago',
+      PaymentMethod.card => 'Tarjeta',
     };
+
+String cardChargeLabel({CardBrand? brand, CardFunding? funding, String? last4}) {
+  final parts = <String>[
+    if (brand != null) cardBrandLabel(brand),
+    if (funding != null) cardFundingLabel(funding),
+    if (last4 != null) '•••• $last4',
+  ];
+  return parts.isEmpty ? 'Tarjeta' : parts.join(' · ');
+}
 
 String cardBrandLabel(CardBrand brand) => switch (brand) {
       CardBrand.visa => 'Visa',

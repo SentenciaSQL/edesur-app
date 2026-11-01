@@ -49,11 +49,13 @@ class PaymentHistoryScreen extends ConsumerWidget {
                           const SizedBox(height: 6),
                           Text(item.lines.length > 1 ? 'Pago múltiple · ${item.lines.length} contratos' : 'Pago individual'),
                           Text(names),
+                          Text(
+                            cardChargeLabel(brand: item.cardBrand, funding: item.cardFunding, last4: item.cardLast4),
+                            style: const TextStyle(color: AppColors.navy),
+                          ),
                           Text(formatDateTime(item.paidAt), style: const TextStyle(color: AppColors.muted)),
                           const SizedBox(height: 6),
                           Text(formatMoney(item.total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                          if (item.cardLast4 != null)
-                            Text('${cardBrandLabel(item.cardBrand!)} •••• ${item.cardLast4}', style: const TextStyle(color: AppColors.muted)),
                         ],
                       ),
                     );
@@ -80,9 +82,9 @@ class TransactionScreen extends ConsumerWidget {
             body: EmptyState(title: 'Operación no encontrada', message: 'Este pago no está en el historial de demostración.'),
           );
         }
-        final method = transaction.cardLast4 == null
-            ? paymentMethodLabel(transaction.method)
-            : '${cardBrandLabel(transaction.cardBrand!)} •••• ${transaction.cardLast4}';
+        final contracts = transaction.lines
+            .map((line) => line.alias.isEmpty ? line.contractNumber : '${line.alias} (${line.contractNumber})')
+            .join(', ');
         return FeatureScaffold(
           title: transaction.number,
           body: ListView(
@@ -93,11 +95,13 @@ class TransactionScreen extends ConsumerWidget {
                   children: [
                     InfoLine(label: 'Transacción', value: transaction.number),
                     InfoLine(label: 'Fecha', value: formatDateTime(transaction.paidAt)),
-                    InfoLine(label: 'Método', value: method),
+                    InfoLine(label: 'Marca', value: transaction.cardBrand == null ? 'Tarjeta' : cardBrandLabel(transaction.cardBrand!)),
+                    InfoLine(label: 'Tipo', value: transaction.cardFunding == null ? 'Crédito o débito' : cardFundingLabel(transaction.cardFunding!)),
+                    InfoLine(label: 'Terminación', value: transaction.cardLast4 == null ? '—' : '•••• ${transaction.cardLast4}'),
                     if (transaction.cardHolder != null) InfoLine(label: 'Titular de la tarjeta', value: transaction.cardHolder!),
-                    InfoLine(label: 'Contratos', value: '${transaction.lines.length}'),
+                    InfoLine(label: 'Contratos', value: contracts),
                     InfoLine(label: 'Estado', value: paymentStatusLabel(transaction.status)),
-                    InfoLine(label: 'Total', value: formatMoney(transaction.total)),
+                    InfoLine(label: 'Importe', value: formatMoney(transaction.total)),
                   ],
                 ),
               ),

@@ -1,4 +1,5 @@
 import '../../domain/entities/entities.dart';
+import '../billing/card_rules.dart';
 import '../billing/tariff.dart';
 import '../constants/app_constants.dart';
 import '../utils/formatters.dart';
@@ -46,7 +47,8 @@ class MockSeed {
       consumption.addAll(built.months);
     }
 
-    final october = invoices.firstWhere((invoice) => invoice.id == 'inv-c1-202610');
+    final ledger = _payments(contracts, invoices);
+    final october = ledger.invoices.firstWhere((invoice) => invoice.id == 'inv-c1-202610');
     final messages = [
       ChatMessage(
         id: 'msg-welcome',
@@ -70,15 +72,15 @@ class MockSeed {
       onboardingDone: false,
       contracts: contracts,
       activeContractId: 'c1',
-      invoices: invoices,
+      invoices: ledger.invoices,
       consumption: consumption,
       outages: _outages(),
       requests: _requests(),
       notifications: _notifications(october),
       announcements: _announcements(),
       mapIncidents: _incidents(),
-      receipts: const [],
-      transactions: const [],
+      receipts: ledger.receipts,
+      transactions: ledger.transactions,
       cards: _cards(),
       messages: messages,
       prefs: const NotificationPrefs(
@@ -96,7 +98,7 @@ class MockSeed {
       requestSequence: 510,
       receiptSequence: 40,
       transactionSequence: 80,
-      cardSequence: 3,
+      cardSequence: 4,
       portfolio: PortfolioPreset.mixed,
       lastUpdated: DemoClock.now,
     );
@@ -124,7 +126,184 @@ class MockSeed {
         expiryYear: 2027,
         isDefault: false,
       ),
+      SavedCard(
+        id: 'card-3',
+        brand: CardBrand.amex,
+        funding: CardFunding.credit,
+        last4: '8431',
+        holderName: 'ANDRES FRIAS',
+        expiryMonth: 1,
+        expiryYear: 2026,
+        isDefault: false,
+      ),
     ];
+  }
+
+  static _Ledger _payments(List<ContractAccount> contracts, List<Invoice> invoices) {
+    final accounts = {for (final contract in contracts) contract.id: contract};
+    final byId = {for (final invoice in invoices) invoice.id: invoice};
+    final receipts = <PaymentReceipt>[];
+    final transactions = <PaymentTransaction>[];
+    final receiptByInvoice = <String, String>{};
+
+    PaymentLine lineFor(String invoiceId, {String? receiptId}) {
+      final invoice = byId[invoiceId]!;
+      final account = accounts[invoice.contractId]!;
+      return PaymentLine(
+        contractId: account.id,
+        contractNumber: account.number,
+        alias: account.alias,
+        holderName: account.holderName,
+        address: account.address,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        amount: invoice.total,
+        receiptId: receiptId,
+      );
+    }
+
+    void approved({
+      required int sequence,
+      required DateTime at,
+      required List<String> invoiceIds,
+      required CardBrand brand,
+      required CardFunding funding,
+      required String last4,
+      required String holder,
+      required List<int> receiptNumbers,
+    }) {
+      final lines = <PaymentLine>[];
+      for (var index = 0; index < invoiceIds.length; index++) {
+        final invoice = byId[invoiceIds[index]]!;
+        final receiptNumber = receiptNumbers[index];
+        final receiptId = 'rcp-$receiptNumber';
+        receiptByInvoice[invoice.id] = receiptId;
+        receipts.add(PaymentReceipt(
+          id: receiptId,
+          number: 'CP-2026-${receiptNumber.toString().padLeft(5, '0')}',
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.number,
+          contractNumber: accounts[invoice.contractId]!.number,
+          amount: invoice.total,
+          method: PaymentMethod.card,
+          paidAt: at,
+          reference: 'TARJ-$last4-${receiptNumber.toString().padLeft(4, '0')}',
+          authorization: 'AUTH-DEMO-${900000 + receiptNumber}',
+          transactionId: 'tx-$sequence',
+          cardBrand: brand,
+          cardLast4: last4,
+          cardFunding: funding,
+        ));
+        lines.add(lineFor(invoice.id, receiptId: receiptId));
+      }
+      transactions.add(PaymentTransaction(
+        id: 'tx-$sequence',
+        number: 'TX-2026-${sequence.toString().padLeft(5, '0')}',
+        paidAt: at,
+        method: PaymentMethod.card,
+        status: PaymentStatus.approved,
+        total: round2(lines.fold<double>(0, (sum, line) => sum + line.amount)),
+        lines: lines,
+        cardBrand: brand,
+        cardLast4: last4,
+        cardHolder: holder,
+        cardFunding: funding,
+      ));
+    }
+
+    void declined({
+      required int sequence,
+      required DateTime at,
+      required String invoiceId,
+      required PaymentStatus status,
+      required CardBrand brand,
+      required CardFunding funding,
+      required String last4,
+      required String holder,
+    }) {
+      final line = lineFor(invoiceId);
+      transactions.add(PaymentTransaction(
+        id: 'tx-$sequence',
+        number: 'TX-2026-${sequence.toString().padLeft(5, '0')}',
+        paidAt: at,
+        method: PaymentMethod.card,
+        status: status,
+        total: line.amount,
+        lines: [line],
+        cardBrand: brand,
+        cardLast4: last4,
+        cardHolder: holder,
+        cardFunding: funding,
+        message: CardRules.failureMessage(status),
+      ));
+    }
+
+    approved(
+      sequence: 74,
+      at: DateTime(2026, 9, 8, 9, 40),
+      invoiceIds: const ['inv-c1-202609'],
+      brand: CardBrand.visa,
+      funding: CardFunding.credit,
+      last4: '1111',
+      holder: 'ANDRES FRIAS',
+      receiptNumbers: const [36],
+    );
+    approved(
+      sequence: 75,
+      at: DateTime(2026, 10, 31, 8, 10),
+      invoiceIds: const ['inv-c2-202610'],
+      brand: CardBrand.mastercard,
+      funding: CardFunding.debit,
+      last4: '4444',
+      holder: 'ANDRES FRIAS',
+      receiptNumbers: const [37],
+    );
+    approved(
+      sequence: 79,
+      at: DateTime(2026, 10, 6, 16, 25),
+      invoiceIds: const ['inv-c4-202609', 'inv-c5-202609'],
+      brand: CardBrand.visa,
+      funding: CardFunding.credit,
+      last4: '1111',
+      holder: 'ANDRES FRIAS',
+      receiptNumbers: const [38, 39],
+    );
+    declined(
+      sequence: 76,
+      at: DateTime(2026, 10, 28, 19, 12),
+      invoiceId: 'inv-c1-202610',
+      status: PaymentStatus.rejected,
+      brand: CardBrand.visa,
+      funding: CardFunding.credit,
+      last4: '0002',
+      holder: 'ANDRES FRIAS',
+    );
+    declined(
+      sequence: 77,
+      at: DateTime(2026, 10, 22, 11, 5),
+      invoiceId: 'inv-c3-202610',
+      status: PaymentStatus.expiredCard,
+      brand: CardBrand.amex,
+      funding: CardFunding.credit,
+      last4: '8431',
+      holder: 'ANDRES FRIAS',
+    );
+    declined(
+      sequence: 78,
+      at: DateTime(2026, 10, 15, 14, 48),
+      invoiceId: 'inv-c6-202610',
+      status: PaymentStatus.processingError,
+      brand: CardBrand.mastercard,
+      funding: CardFunding.debit,
+      last4: '0005',
+      holder: 'ANDRES FRIAS',
+    );
+
+    final updated = [
+      for (final invoice in invoices)
+        receiptByInvoice.containsKey(invoice.id) ? invoice.copyWith(receiptId: receiptByInvoice[invoice.id]) : invoice,
+    ];
+    return _Ledger(updated, receipts, transactions);
   }
 
   static List<ContractAccount> _contracts() {
@@ -535,16 +714,27 @@ class MockSeed {
     final active = allowed.contains(snapshot.activeContractId)
         ? snapshot.activeContractId
         : (contracts.isEmpty ? '' : contracts.first.id);
+    final transactions = snapshot.transactions
+        .where((transaction) => transaction.lines.every((line) => allowed.contains(line.contractId)))
+        .toList();
+    final keptReceipts = {
+      for (final transaction in transactions)
+        for (final line in transaction.lines)
+          if (line.receiptId != null) line.receiptId!,
+    };
     return snapshot.copyWith(
       contracts: contracts,
       activeContractId: active,
-      invoices: snapshot.invoices.where((invoice) => allowed.contains(invoice.contractId)).toList(),
+      invoices: [
+        for (final invoice in snapshot.invoices.where((invoice) => allowed.contains(invoice.contractId)))
+          invoice.receiptId != null && !keptReceipts.contains(invoice.receiptId) ? invoice.copyWith(clearReceiptId: true) : invoice,
+      ],
       consumption: snapshot.consumption.where((month) => allowed.contains(month.contractId)).toList(),
       outages: snapshot.outages.where((report) => allowed.contains(report.contractId)).toList(),
       requests: snapshot.requests.where((request) => allowed.contains(request.contractId)).toList(),
       portfolio: portfolio,
-      transactions: const [],
-      receipts: const [],
+      transactions: transactions,
+      receipts: snapshot.receipts.where((receipt) => keptReceipts.contains(receipt.id)).toList(),
     );
   }
 
@@ -1269,6 +1459,13 @@ class _History {
   const _History(this.invoices, this.months);
   final List<Invoice> invoices;
   final List<ConsumptionMonth> months;
+}
+
+class _Ledger {
+  const _Ledger(this.invoices, this.receipts, this.transactions);
+  final List<Invoice> invoices;
+  final List<PaymentReceipt> receipts;
+  final List<PaymentTransaction> transactions;
 }
 
 class SupplyBundle {

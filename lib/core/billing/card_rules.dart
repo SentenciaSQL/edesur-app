@@ -190,15 +190,11 @@ class CardRules {
   }
 
   static PaymentStatus outcome({
-    required PaymentMethod method,
     required bool forceFailure,
     String? last4,
     int? expiryMonth,
     int? expiryYear,
   }) {
-    if (method != PaymentMethod.card) {
-      return forceFailure ? PaymentStatus.rejected : PaymentStatus.approved;
-    }
     if (forceFailure || last4 == '0002') return PaymentStatus.rejected;
     if (last4 == '0005') return PaymentStatus.processingError;
     if (expiryMonth != null && expiryYear != null) {

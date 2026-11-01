@@ -94,6 +94,7 @@ class PayInvoicesUseCase {
     String? expiry,
     String? holderName,
     SavedCard? savedCard,
+    CardFunding? cardFunding,
   }) {
     final unique = invoiceIds.toSet().toList();
     if (unique.isEmpty) throw DemoException('Selecciona al menos un contrato con balance pendiente.');
@@ -114,12 +115,13 @@ class PayInvoicesUseCase {
     int? year = savedCard?.expiryYear;
     var brand = savedCard?.brand;
     var holder = savedCard?.holderName;
-    if (method == PaymentMethod.card && savedCard == null) {
+    var funding = savedCard?.funding;
+    if (savedCard == null) {
       final draft = CardRules.draft(
         number: cardNumber ?? '',
         holderName: holderName ?? '',
         expiry: expiry ?? '',
-        funding: CardFunding.credit,
+        funding: cardFunding ?? CardFunding.credit,
       );
       if (draft == null) throw DemoException('Revisa el número, la marca y el vencimiento de la tarjeta de prueba.');
       last4 = draft.last4;
@@ -127,9 +129,9 @@ class PayInvoicesUseCase {
       year = draft.expiryYear;
       brand = draft.brand;
       holder = draft.holderName;
+      funding = draft.funding;
     }
     final status = CardRules.outcome(
-      method: method,
       forceFailure: forceFailure,
       last4: last4,
       expiryMonth: month,
@@ -142,6 +144,7 @@ class PayInvoicesUseCase {
       cardBrand: brand,
       cardLast4: last4,
       cardHolder: holder,
+      cardFunding: funding,
       message: status == PaymentStatus.approved ? null : CardRules.failureMessage(status),
     );
   }

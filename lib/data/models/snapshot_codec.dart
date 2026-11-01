@@ -372,6 +372,7 @@ class SnapshotCodec {
         'transactionId': r.transactionId,
         'cardBrand': r.cardBrand?.name,
         'cardLast4': r.cardLast4,
+        'cardFunding': r.cardFunding?.name,
       };
 
   static PaymentReceipt _readReceipt(Map<String, dynamic> m) => PaymentReceipt(
@@ -388,6 +389,7 @@ class SnapshotCodec {
         transactionId: m['transactionId'] as String?,
         cardBrand: m['cardBrand'] == null ? null : _enum(CardBrand.values, m['cardBrand']),
         cardLast4: m['cardLast4'] as String?,
+        cardFunding: m['cardFunding'] == null ? null : _enum(CardFunding.values, m['cardFunding']),
       );
 
   static Map<String, dynamic> _card(SavedCard c) => {
@@ -447,6 +449,7 @@ class SnapshotCodec {
         'cardBrand': t.cardBrand?.name,
         'cardLast4': t.cardLast4,
         'cardHolder': t.cardHolder,
+        'cardFunding': t.cardFunding?.name,
         'message': t.message,
       };
 
@@ -461,6 +464,7 @@ class SnapshotCodec {
         cardBrand: m['cardBrand'] == null ? null : _enum(CardBrand.values, m['cardBrand']),
         cardLast4: m['cardLast4'] as String?,
         cardHolder: m['cardHolder'] as String?,
+        cardFunding: m['cardFunding'] == null ? null : _enum(CardFunding.values, m['cardFunding']),
         message: m['message'] as String?,
       );
 

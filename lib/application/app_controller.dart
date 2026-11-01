@@ -249,6 +249,7 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
     String? expiry,
     String? holderName,
     String? savedCardId,
+    CardFunding? cardFunding,
     bool forceFailure = false,
   }) async {
     if (_paying) {
@@ -273,6 +274,7 @@ class AppController extends AsyncNotifier<DemoSnapshot> {
         expiry: expiry,
         holderName: holderName,
         savedCard: saved,
+        cardFunding: cardFunding,
       );
       await _commitFromDb();
       return transaction;

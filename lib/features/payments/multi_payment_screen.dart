@@ -45,7 +45,7 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
     final confirmed = await showConfirmSheet(
       context: context,
       title: 'Confirmar pago simulado',
-      message: 'Una sola operación cubrirá ${_selected.length} factura${_selected.length == 1 ? '' : 's'}. No saldrá dinero de ninguna cuenta.',
+      message: 'Una sola tarjeta (${submission.summary}) cubrirá ${_selected.length} factura${_selected.length == 1 ? '' : 's'} en una única transacción. No saldrá dinero de ninguna cuenta.',
       confirmLabel: 'Pagar ahora',
     );
     if (!confirmed || !mounted) return;
@@ -58,6 +58,7 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
             expiry: submission.expiry,
             holderName: submission.holderName,
             savedCardId: submission.savedCardId,
+            cardFunding: submission.funding,
             forceFailure: submission.forceFailure,
           );
       if (mounted) {
@@ -119,7 +120,7 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
         final chosen = rows.where((row) => row.invoice != null && _selected.contains(row.invoice!.id)).toList();
         final total = chosen.fold<double>(0, (sum, row) => sum + row.balance);
         return FeatureScaffold(
-          title: _step == 0 ? 'Pagar contratos' : _step == 1 ? 'Resumen' : 'Método de pago',
+          title: _step == 0 ? 'Pagar contratos' : _step == 1 ? 'Resumen' : 'Tarjeta',
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -209,14 +210,14 @@ class _MultiPaymentScreenState extends ConsumerState<MultiPaymentScreen> {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: chosen.isEmpty || total <= 0 ? null : () => setState(() => _step = 2),
-                  child: const Text('Elegir método de pago'),
+                  child: const Text('Elegir tarjeta'),
                 ),
                 TextButton(onPressed: () => setState(() => _step = 0), child: const Text('Volver a la selección')),
               ],
               if (_step == 2) ...[
                 Text('Total ${formatMoney(total)}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
                 const SizedBox(height: 6),
-                Text('Una tarjeta, transferencia o punto de pago cubre las ${chosen.length} facturas.'),
+                Text('Una sola tarjeta cubre las ${chosen.length} facturas. El importe se muestra en pesos dominicanos.'),
                 const SizedBox(height: 16),
                 SimulatedPaymentForm(cards: snapshot.cards, onSubmit: _pay),
                 TextButton(onPressed: () => setState(() => _step = 1), child: const Text('Volver al resumen')),

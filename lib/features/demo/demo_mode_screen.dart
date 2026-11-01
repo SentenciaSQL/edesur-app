@@ -35,7 +35,7 @@ class DemoModeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           const Text('Cartera de contratos', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
           const SizedBox(height: 6),
-          const Text('Cambia cuántos contratos propios y de terceros tiene la cuenta. Se restablecen facturas y pagos. Las tarjetas guardadas se conservan.'),
+          const Text('Cambia cuántos contratos propios y de terceros tiene la cuenta. Se restablecen las facturas y los pagos de la sesión, y vuelve el historial de tarjetas de demostración. Las tarjetas guardadas se conservan.'),
           const SizedBox(height: 10),
           for (final preset in PortfolioPreset.values) ...[
             AppCard(

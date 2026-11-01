@@ -31,6 +31,7 @@ abstract class BillingRepository {
     CardBrand? cardBrand,
     String? cardLast4,
     String? cardHolder,
+    CardFunding? cardFunding,
     String? message,
   });
 }

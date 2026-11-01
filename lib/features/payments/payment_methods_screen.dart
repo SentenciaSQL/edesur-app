@@ -24,7 +24,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text('Solo guardamos marca, últimos cuatro dígitos, nombre, vencimiento y tipo. El número completo y el CVV no se almacenan.'),
+              const Text('Solo se aceptan tarjetas de crédito o débito. Guardamos marca, tipo, últimos cuatro dígitos, nombre y vencimiento. El número completo y el CVV no se almacenan.'),
               const SizedBox(height: 12),
               if (snapshot.cards.isEmpty)
                 const EmptyState(

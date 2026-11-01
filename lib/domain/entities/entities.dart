@@ -2,7 +2,7 @@ enum ServiceStatus { active, interrupted, suspended }
 
 enum InvoiceStatus { paid, pending, overdue }
 
-enum PaymentMethod { card, transfer, paymentPoint }
+enum PaymentMethod { card }
 
 enum CardBrand { visa, mastercard, amex }
 
@@ -248,6 +248,7 @@ class Invoice {
     DateTime? paidAt,
     String? receiptId,
     bool clearPayment = false,
+    bool clearReceiptId = false,
   }) {
     return Invoice(
       id: id,
@@ -267,7 +268,7 @@ class Invoice {
       total: total,
       status: status ?? this.status,
       paidAt: clearPayment ? null : paidAt ?? this.paidAt,
-      receiptId: clearPayment ? null : receiptId ?? this.receiptId,
+      receiptId: clearPayment || clearReceiptId ? null : receiptId ?? this.receiptId,
     );
   }
 }
@@ -488,6 +489,7 @@ class PaymentReceipt {
     this.transactionId,
     this.cardBrand,
     this.cardLast4,
+    this.cardFunding,
   });
 
   final String id;
@@ -503,6 +505,7 @@ class PaymentReceipt {
   final String? transactionId;
   final CardBrand? cardBrand;
   final String? cardLast4;
+  final CardFunding? cardFunding;
 }
 
 class SavedCard {
@@ -580,6 +583,7 @@ class PaymentTransaction {
     this.cardBrand,
     this.cardLast4,
     this.cardHolder,
+    this.cardFunding,
     this.message,
   });
 
@@ -593,6 +597,7 @@ class PaymentTransaction {
   final CardBrand? cardBrand;
   final String? cardLast4;
   final String? cardHolder;
+  final CardFunding? cardFunding;
   final String? message;
 
   bool get approved => status == PaymentStatus.approved;
